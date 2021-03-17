@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">CBNUMap</string>
+    <string name="maps_api_key">CBNUMap</string>
+</resources>
