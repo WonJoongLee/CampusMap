@@ -13,6 +13,8 @@ import android.util.Log
 import android.view.animation.TranslateAnimation
 import androidx.core.app.ActivityCompat
 import com.cbnumap.cbnumap.databinding.ActivityMainBinding
+import com.cbnumap.cbnumap.server.Coordinate
+import com.cbnumap.cbnumap.server.CoordinateDB
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -34,6 +36,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var coarseLocation = 1001
     private var fineLocation = 1002
 
+    //room db 관련된 부분
+    private var coordinateDB : CoordinateDB? = null
+    private var coordinateList = listOf<Coordinate>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val binding = ActivityMainBinding.inflate(layoutInflater)
@@ -44,8 +50,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             supportFragmentManager.findFragmentById(R.id.mapFragment) as? SupportMapFragment
         mapFragment?.getMapAsync(this)
         val screenHeight = getHeight(applicationContext)
-
-
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -89,8 +93,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
 
-        //36.62758962182894, 127.45306974793739
-        //명덕관에서 나오면 있는 곳 정도
+        //선을 잇는 부분 예시
         binding.searchBtn.setOnClickListener {
             val markerOption = MarkerOptions()
             val polyLine = mMap.addPolyline(
@@ -103,9 +106,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             mMap.addMarker(markerOption)
         }
 
+
+        //RoomDB에서 데이터를 가져오는 부분
+        coordinateDB = CoordinateDB.getInstance(this)
+        val r = Runnable {
+            // 빈 list로 초기화된 coordinateList에 Room db에 저장된 정보를 모두 읽어와서
+            // Coordinate의 형태로 저장한다. getAll() 메서드를 통해 가져온다.
+            // SubThread를 이용해서 Main Thread에 영향을 주지 않도록 해야 한다.
+            coordinateList = coordinateDB?.coordinateDao()?.getAll()!!
+            Log.e("kor_name", coordinateList[0].kor_name.toString())
+            Log.e("latitude", coordinateList[0].latitude.toString())
+            Log.e("longitude", coordinateList[0].longitude.toString())
+            Log.e("id", coordinateList[0].id.toString())
+        }
+        val thread = Thread(r)
+        thread.start()
     }
 
-    //36.62761494377374, 127.45305214428042
     private fun getHeight(context: Context): Int {
         var height: Int = 0
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
