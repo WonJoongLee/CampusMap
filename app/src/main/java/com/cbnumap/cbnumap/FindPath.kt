@@ -1,4 +1,4 @@
-package com.cbnumap.cbnumap.server
+package com.cbnumap.cbnumap
 
 class FindPath(lat : Int, lon : Int) {
 
