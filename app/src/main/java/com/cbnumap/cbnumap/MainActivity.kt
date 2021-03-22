@@ -9,8 +9,13 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.util.Log
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 import androidx.core.app.ActivityCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.cbnumap.cbnumap.databinding.ActivityMainBinding
+import com.cbnumap.cbnumap.recyclerview.RecoAdapter
 import com.cbnumap.cbnumap.server.Coordinate
 import com.cbnumap.cbnumap.server.CoordinateDB
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -23,9 +28,8 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import java.lang.Runnable
 import java.util.*
 import kotlin.coroutines.suspendCoroutine
 
@@ -54,10 +58,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private val from = IntArray(99999) { -1 } // 이전 점(위치)를 저장하기 위한 배열
     private val finalPath = mutableListOf<Int>()
 
+    private lateinit var autoTextRV: RecyclerView // 자동완성 연결해줄 리사이클러뷰
+
+    private var cameDown = false
+    private lateinit var binding : ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val binding = ActivityMainBinding.inflate(layoutInflater)
+        binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         // Get the SupportMapFragment and request notification when the map is ready to be used.
@@ -90,63 +98,149 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             return
         }
 
-        var cameDown = false
+
+        val upSize = (screenHeight.toFloat() / 7f) // 화면 중 1/7만큼을 차지하는 윗 부분
+        val downSize = (screenHeight.toFloat() / 7f) * 6f // 화면 중 6/7만큼을 차지하는 아래 부분
         binding.comeDownBtn.setOnClickListener {
-            val downSize = (screenHeight.toFloat() / 7f)
-            val layout = binding.targetLinear
-            val params = layout.layoutParams
-            params.height = downSize.toInt() // layout height를 내려올 만큼으로 바꿈
+            val upLayout = binding.upLinear//위에서 아래로 내려오는 LinearLayout
+            val upParams = upLayout.layoutParams
+            upParams.height = upSize.toInt() // layout height를 내려올 만큼으로 바꿈
+
+            val downLayout = binding.downLinear // 아래에서 위로 올라오는 LinearLayout
+            val downParams = downLayout.layoutParams
+            downParams.height = downSize.toInt() // layout height를 내려올 만큼으로 바꿈
+            Log.e("screenHeight", screenHeight.toString())
+            Log.e("upSize", upSize.toString())
             Log.e("downSize", downSize.toString())
+
             if (!cameDown) {
-                binding.targetLinear.animate().translationY(downSize).withLayer().duration = 500
+                binding.upLinear.animate().translationY(upSize).withLayer().duration = 500
                 binding.comeDownBtn.text = "GO UP"
+                binding.downLinear.animate().translationY(-downSize).withLayer().duration = 500
                 cameDown = true
             } else {
-                binding.targetLinear.animate().translationY(-downSize).withLayer().duration = 500
+                binding.upLinear.animate().translationY(-upSize).withLayer().duration = 500
+                binding.downLinear.animate().translationY(downSize).withLayer().duration = 500
                 binding.comeDownBtn.text = "COME DOWN"
                 cameDown = false
             }
         }
 
-        //RoomDB에서 데이터를 가져오는 부분
-        coordinateDB = CoordinateDB.getInstance(this)
-        val r = Runnable {
-            // 빈 list로 초기화된 coordinateList에 Room db에 저장된 정보를 모두 읽어와서
-            // Coordinate의 형태로 저장한다. getAll() 메서드를 통해 가져온다.
-            // SubThread를 이용해서 Main Thread에 영향을 주지 않도록 해야 한다.
-            coordinateList = coordinateDB?.coordinateDao()?.getAll()!!
-            Log.e("kor_name", coordinateList[0].kor_name.toString())
-            Log.e("latitude", coordinateList[0].latitude.toString())
-            Log.e("longitude", coordinateList[0].longitude.toString())
-            Log.e("id", coordinateList[0].id.toString())
+        CoroutineScope(Dispatchers.Unconfined).launch {
+            //RoomDB에서 데이터를 가져오는 부분
+            coordinateDB = CoordinateDB.getInstance(applicationContext)
+            val r = Runnable {
+                // 빈 list로 초기화된 coordinateList에 Room db에 저장된 정보를 모두 읽어와서
+                // Coordinate의 형태로 저장한다. getAll() 메서드를 통해 가져온다.
+                // SubThread를 이용해서 Main Thread에 영향을 주지 않도록 해야 한다.
+                coordinateList = coordinateDB?.coordinateDao()?.getAll()!!
+                Log.e("kor_name", coordinateList[0].kor_name.toString())
+                Log.e("latitude", coordinateList[0].latitude.toString())
+                Log.e("longitude", coordinateList[0].longitude.toString())
+                Log.e("id", coordinateList[0].id.toString())
+            }
+            val thread = Thread(r)
+            thread.start()
+            thread.join()
         }
-        val thread = Thread(r)
-        thread.start()
-        thread.join()
 
 
-        //선을 잇는 부분 예시
+        /** autoCompleteText 부분 **/
+        // 자동완성 창에 지명 넣기 위해 autoTextStringList 생성
+        val autoTextStringList = mutableListOf<String>()
+        for (i in coordinateList) {
+            autoTextStringList.add(i.kor_name)
+        }
+        println("@@@@ ${coordinateList[1].kor_name}")
+
+        //TODO 210320에 할 것, autotextview에 지명 뜨는 것
+        //TODO 지명 뜨면 클릭할 수 있게 아래에 지명 버튼 리사이클러 뷰 만들기
+        println("@@@@ $autoTextStringList")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, autoTextStringList)
+        val startPosATV = findViewById<AutoCompleteTextView>(R.id.startAutoTV)
+        val endPosATV =  findViewById<AutoCompleteTextView>(R.id.endAutoTV)
+        startPosATV.setAdapter(adapter)
+        startPosATV.threshold = 1
+        endPosATV.setAdapter(adapter)
+        endPosATV.threshold = 1
+
+        /** 사용자가 값을 입력하면 그 즉시 다익스트라로 위치를 찾는다. **/
+        var startPosString = "" // 사용자가 입력한 출발점
+        var endPosString = "" // 사용자가 입력한 도착점
+        //사용자가 모두 입력했을 때 둘 다 true로 바뀌고 findpath를한다.
+        //모두 입력했으면 다시 입력할 경우를 대비하여 false로 바꿔놓는다.
+        var startPosInputted = false // 사용자가 출발점을 입력했는지 확인하기 위함
+        var endPosInputted = false // 사용자가 도착점을 입력했는지 확인하기 위함
+        var startPosId = -1 // 출발점 id, id 기준은 Room db 기준
+        var endPosId = -1 // 도착점 id
+        startPosATV.setOnItemClickListener { adapterView, view, position, id ->
+            startPosString = startPosATV.text.toString()
+            binding.findRouteText.text = "${startPosString}에서부터 ${endPosString}까지의 경로를 찾습니다."
+            for(i in coordinateList){
+                if(i.kor_name == startPosString){
+                    startPosInputted = true
+                    startPosId = i.id
+                    break // 원하는 값을 찾았으므로 탈출
+                }
+            }
+            if(startPosInputted && endPosInputted){
+                findPath(startPosId, endPosId)
+            }
+        }
+        endPosATV.setOnItemClickListener { adapterView, view, position, id ->
+            endPosString = endPosATV.text.toString()
+            binding.findRouteText.text = "${startPosString}에서부터 ${endPosString}까지의 경로를 찾습니다."
+            for(i in coordinateList){
+                if(i.kor_name == endPosString){
+                    endPosInputted = true
+                    endPosId = i.id
+                    break // 원하는 값을 찾았으므로 탈출
+                }
+            }
+            if(startPosInputted && endPosInputted){
+                findPath(startPosId, endPosId)
+            }
+        }
+
+        binding.searchRouteBtn.setOnClickListener {
+            binding.upLinear.animate().translationY(-upSize).withLayer().duration = 500
+            binding.downLinear.animate().translationY(downSize).withLayer().duration = 500
+            binding.comeDownBtn.text = "COME DOWN"
+            cameDown = false
+        }
+
+        //TODO 이부분 삭제 할 지 생각해보기
+//        val recoAdapter = RecoAdapter(applicationContext)
+//        autoTextRV = findViewById(R.id.autoTextRV)
+//        autoTextRV.adapter = recoAdapter
+//        autoTextRV.setHasFixedSize(false)
+//        autoTextRV.layoutManager = LinearLayoutManager(
+//            applicationContext,
+//            LinearLayoutManager.VERTICAL,
+//            false
+//        )
+
+
+
+
         var searchBtnClicked = false
-
         binding.searchBtn.setOnClickListener {
             if (!searchBtnClicked) {
-                drawOnMap()
-
+                //drawOnMap()
+                //findPath()
                 searchBtnClicked = true
                 binding.searchBtn.text = "Remove Line"
             } else {
                 polyLine.remove()
                 mMap.clear()
-
                 searchBtnClicked = false
                 binding.searchBtn.text = "Search"
             }
         }
-
         addWeight()
-        findPath()
     }
 
+    //지금은 필요 없는 함수인데, 혹시 몰라서 냅둔다.
     private fun drawOnMap() {
         val markerOption = MarkerOptions()
         //소웨 과동이랑 소프트웨어 앞 사거리 연결해보기
@@ -169,83 +263,86 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
 
     //TODO 추후에 여기에서 파라미터로 시작점, 끝 점을 받던가 해야할 것 같음.
-    private fun findPath() {
+    private fun findPath(startId : Int, endId : Int) {
+        // 다시 검색할 때는 초기화해줘야 한다.
+        // finalpath.clear()까지는 초기화 하는 부분
+        pq.clear()
+        for (i in dist.indices) {
+            dist[i] = Integer.MAX_VALUE - 1
+            from[i] = -1
+        }
+        finalPath.clear()
+
         Log.d("find Path", "find Path In")
         //임시적으로 양성재에서 출발해서 소웨과동까지 가는 것 구현해봄
-        pq.add(Temp(4, 7, 53)) // 출발점 pq에 입력
-        dist[4] = 0 // 출발점 초기화
+        //pq.add(Temp(4, 7, 53)) // 출발점 pq에 입력
+        for(i in pointList[startId]){
+            pq.add(Temp(i.startId, i.endId, i.weight)) // 시작점으로부터 연결된 노드들을 모두 더해서 초기화한다.
+        }
+        //dist[4] = 0 // 출발점 초기화
+        dist[startId] = 0 // 출발점 초기화
         while (pq.isNotEmpty()) {
-//            println("$$$ $pq")
-//            for (i in 0 until 10) {
-//                print("${dist[i]} ")
-//            }
-//            println()
-//            for (i in 0 until 10) {
-//                print("${from[i]} ")
-//            }
-//            println()
             val point = pq.poll()!! // pq가 비어있지 않을 때 들어왔기 때문에, pq가 null이 될 수는 없다
             val startId = point.startId
-            //val endId = point.endId
-            //val weight = point.weight
             for (i in 0 until pointList[startId].size) { // 연결된 값들 pq에 추가
                 // 기존에 있던 값(dist[pointList[startId][i].endId])이
                 // 현재 위치한 노드의 dist(dist[pointList[startId][i].startId])에
                 // 연결된 노드의 가중치(pointList[startId][i].weight)의 합이 더 작으면 초기화한다.
                 // 쉽게 말해서 새로 탐색하려는 dist가 더 작으면 그 작은 값으로 해당 Point를 초기화 시켜주는 것.
                 // 그리고 pq에 추가까지.
-                //println("@@@ ${dist[pointList[startId][i].endId]}, ${dist[startId]}, ${pointList[startId][i].weight}")
-//                Log.e(
-//                    "@@@",
-//                    "${pointList[startId][i].endId}, ${dist[pointList[startId][i].endId]}, ${dist[startId]}, ${pointList[startId][i].weight}"
-//                )
                 if (dist[pointList[startId][i].endId] > dist[startId] + pointList[startId][i].weight) {
                     dist[pointList[startId][i].endId] =
                         dist[pointList[startId][i].startId] + pointList[startId][i].weight
                     from[pointList[startId][i].endId] = pointList[startId][i].startId
                     // 업데이트 된 노드의 연결된 노드를 다음부터 탐색하기 위해 추가한다.
-                    //Log.e("check", pointList[startId][i].endId.toString())
-                    //Log.e("@@@", "${pointList[startId][i].endId}, ${dist[pointList[startId][i].endId]}, ${dist[startId]}, ${pointList[startId][i].weight}")
                     for (j in pointList[pointList[startId][i].endId]) {
-                        //Log.e("check", "${j.startId}, ${j.endId}, ${j.weight}")
                         pq.add(Temp(j.startId, j.endId, j.weight))
                     }
                 }
             }
-
         }
-
-        var temp = 2 // 목적지로부터 역추적, TODO 추후에 여기 파라미터로 받아서 위치 넣어줘야함
-        finalPath.add(2)
+        //var temp = 2 // 목적지로부터 역추적, TODO 추후에 여기 파라미터로 받아서 위치 넣어줘야함
+        var temp = endId
+        //finalPath.add(2)
+        finalPath.add(endId)
         while (true) {
             temp = from[temp]
             finalPath.add(temp)
-            if (temp == 4) { // 출발지면 탈출, TODO 추후에 여기 파라미터로 받아서 위치 넣어줘야함
+            //if (temp == 4) { // 출발지면 탈출, TODO 추후에 여기 파라미터로 받아서 위치 넣어줘야함
+            if (temp == startId) {
                 break
             }
         }
         println("최종 경로 : $finalPath")
-        Log.e("weight sum", dist[2].toString())
-        //TODO 이제 그림 그려줘야 함
+        //Log.e("weight sum", dist[2].toString())
+        Log.e("weight sum", dist[endId].toString())
 
+        //다익스트라로 최단 경로를 찾은 후, 그림을 그려주는 부분
+        drawLines(startId, endId)
     }
 
-    private fun drawLines() {
+    private fun drawLines(startId: Int, endId: Int) {
         val markerOption = MarkerOptions()
         //소웨 과동이랑 소프트웨어 앞 사거리 연결해보기
-        val latStartPoint = coordinateList[3].latitude
-        val latEndPoint = coordinateList[1].latitude
-        val lngStartPoint = coordinateList[3].longitude
-        val lngEndPoint = coordinateList[1].longitude
+//        val latStartPoint = coordinateList[3].latitude
+//        val latEndPoint = coordinateList[1].latitude
+//        val lngStartPoint = coordinateList[3].longitude
+//        val lngEndPoint = coordinateList[1].longitude
+        val latStartPoint = coordinateList[startId - 1].latitude
+        val latEndPoint = coordinateList[endId - 1].latitude
+        val lngStartPoint = coordinateList[startId - 1].longitude
+        val lngEndPoint = coordinateList[endId - 1].longitude
 
         for (i in 0 until finalPath.size - 1) {
-            val cur = finalPath[i]-1 // 1씩 빼줘야 하는 이유는 coordinatelist에서는 0부터 값이 들어가있기 때문.
-            val next = finalPath[i + 1]-1
+            val cur = finalPath[i] - 1 // 1씩 빼줘야 하는 이유는 coordinatelist에서는 0부터 값이 들어가있기 때문.
+            val next = finalPath[i + 1] - 1
             // 여기서와 마커를 찍을 때, 즉 coordinateList에서만 찍으면 되므로 그냥 1을 여기서 빼주는 식으로 처리
             val latStart = coordinateList[cur].latitude
             val latEnd = coordinateList[next].latitude
             val lngStart = coordinateList[cur].longitude
             val lngEnd = coordinateList[next].longitude
+
+            Log.e("point", "$cur, $next")
 
             polyLine = mMap.addPolyline(
                 PolylineOptions().clickable(true).add(
@@ -256,12 +353,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         }
 
-//        polyLine = mMap.addPolyline(
-//            PolylineOptions().clickable(true).add(
-//                LatLng(latStartPoint, lngStartPoint),
-//                LatLng(latEndPoint, lngEndPoint),
-//            )
-//        )
         markerOption.position(LatLng(latStartPoint, lngStartPoint)).title("출발점")
         mMap.addMarker(markerOption)
         markerOption.position(LatLng(latEndPoint, lngEndPoint)).title("도착점")
@@ -336,6 +427,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             return
         }
 
+
+
         GlobalScope.launch {
             delay(100L)
             runOnUiThread {
@@ -355,11 +448,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         fusedLocationClient.lastLocation
             .addOnSuccessListener { location: Location? ->
                 Log.e("?", location?.latitude.toString())
-                curLocLat = location?.latitude ?: 0.0
-                curLocLng = location?.longitude ?: 0.0
+                curLocLat = location?.latitude ?: 36.62905249003887 // 충북대학교 좌표
+                curLocLng = location?.longitude ?: 127.45629718340625
                 Log.e("Current Location", "${curLocLat}, $curLocLng")
             }
+    }
 
-        drawLines()
+
+    override fun onBackPressed() {
+        val screenHeight = getHeight(applicationContext)
+        val upSize = (screenHeight.toFloat() / 7f) // 화면 중 1/7만큼을 차지하는 윗 부분
+        val downSize = (screenHeight.toFloat() / 7f) * 6f // 화면 중 6/7만큼을 차지하는 아래 부분
+        if(cameDown){
+            binding.upLinear.animate().translationY(-upSize).withLayer().duration = 500
+            binding.downLinear.animate().translationY(downSize).withLayer().duration = 500
+            binding.comeDownBtn.text = "COME DOWN"
+            cameDown = false
+        }else{
+            super.onBackPressed()
+        }
     }
 }

@@ -7,9 +7,9 @@
     tools:context=".MainActivity">
 
     <LinearLayout
-        android:id="@+id/targetLinear"
+        android:id="@+id/upLinear"
         android:layout_width="match_parent"
-        android:layout_height="100dp"
+        android:layout_height="0dp"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintBottom_toTopOf="parent"
@@ -18,14 +18,18 @@
         android:background="@color/white"
         android:orientation="vertical"
         >
+        <!--elevation은 그림자 효관데, 없으면 내려오는 것이 보이지 않는다.-->
 
-        <EditText
+
+        <AutoCompleteTextView
+            android:id="@+id/startAutoTV"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="출발지"
             />
 
-        <EditText
+        <AutoCompleteTextView
+            android:id="@+id/endAutoTV"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="도착지"/>
@@ -64,5 +68,42 @@
         android:layout_margin="20dp"
         />
 
+    <LinearLayout
+        android:id="@+id/downLinear"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="parent"
+        android:background="@color/white"
+        android:gravity="center"
+        android:elevation="8dp"
+        android:orientation="vertical"
+        >
 
+        <!--겹치는 에러 때문에 35dp 정도 marginTop을 주는 것으로 해결해야 할듯 -->
+        <TextView
+            android:id="@+id/findRouteText"
+            android:layout_marginTop="35dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:text="경로를 입력해주세요!"/>
+
+        <Button
+            android:layout_marginTop="10dp"
+            android:id="@+id/searchRouteBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="검색"
+            />
+
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/autoTextRV"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"/>
+
+    </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
