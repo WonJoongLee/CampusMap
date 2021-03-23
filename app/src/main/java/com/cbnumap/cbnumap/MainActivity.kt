@@ -8,7 +8,6 @@ import android.location.Location
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.text.Spannable
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
@@ -19,10 +18,7 @@ import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import androidx.core.app.ActivityCompat
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.cbnumap.cbnumap.databinding.ActivityMainBinding
-import com.cbnumap.cbnumap.recyclerview.RecoAdapter
 import com.cbnumap.cbnumap.server.Coordinate
 import com.cbnumap.cbnumap.server.CoordinateDB
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -38,7 +34,6 @@ import com.google.android.gms.maps.model.PolylineOptions
 import kotlinx.coroutines.*
 import java.lang.Runnable
 import java.util.*
-import kotlin.coroutines.suspendCoroutine
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -65,9 +60,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private val from = IntArray(99999) { -1 } // 이전 점(위치)를 저장하기 위한 배열
     private val finalPath = mutableListOf<Int>()
 
-    private lateinit var autoTextRV: RecyclerView // 자동완성 연결해줄 리사이클러뷰
-
-    private var cameDown = false // camedown이 false면 화면이 내려와있지 않은 상태고, camedown이 true면 화면이 내려와 있는 상태다.
+    private var cameDown =
+        false // camedown이 false면 화면이 내려와있지 않은 상태고, camedown이 true면 화면이 내려와 있는 상태다.
     private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -146,7 +140,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 // Coordinate의 형태로 저장한다. getAll() 메서드를 통해 가져온다.
                 // SubThread를 이용해서 Main Thread에 영향을 주지 않도록 해야 한다.
                 coordinateList = coordinateDB?.coordinateDao()?.getAll()!!
-                Log.e("kor_name", coordinateList[0].kor_name.toString())
+                Log.e("kor_name", coordinateList[0].kor_name)
                 Log.e("latitude", coordinateList[0].latitude.toString())
                 Log.e("longitude", coordinateList[0].longitude.toString())
                 Log.e("id", coordinateList[0].id.toString())
@@ -161,7 +155,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // 자동완성 창에 지명 넣기 위해 autoTextStringList 생성
         val autoTextStringList = mutableListOf<String>()
         for (i in coordinateList) {
-            if (i.kor_name != "-") {
+            if (i.kor_name.isNotEmpty()) {
                 autoTextStringList.add(i.kor_name) // 지명 이름 추가
             }
             if (i.building_id.isNotEmpty()) {
@@ -170,8 +164,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
         println("@@@@ ${coordinateList[1].kor_name}")
 
-        //TODO 210320에 할 것, autotextview에 지명 뜨는 것
-        //TODO 지명 뜨면 클릭할 수 있게 아래에 지명 버튼 리사이클러 뷰 만들기
         println("@@@@ $autoTextStringList")
         val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, autoTextStringList)
         val startPosATV = findViewById<AutoCompleteTextView>(R.id.startAutoTV)
@@ -295,28 +287,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addWeight()
     }
 
-    //지금은 필요 없는 함수인데, 혹시 몰라서 냅둔다.
-    private fun drawOnMap() {
-        val markerOption = MarkerOptions()
-        //소웨 과동이랑 소프트웨어 앞 사거리 연결해보기
-        val latStart = coordinateList[1].latitude
-        val latEnd = coordinateList[2].latitude
-        val lngStart = coordinateList[1].longitude
-        val lngEnd = coordinateList[2].longitude
-
-        polyLine = mMap.addPolyline(
-            PolylineOptions().clickable(true).add(
-                LatLng(latStart, lngStart),
-                LatLng(latEnd, lngEnd),
-            )
-        )
-        markerOption.position(LatLng(latStart, lngStart)).title("출발점")
-        mMap.addMarker(markerOption)
-        markerOption.position(LatLng(latEnd, lngEnd)).title("도착점")
-        mMap.addMarker(markerOption)
-    }
-
-
     /**
      * 경로를 찾는 함수입니다.
      * 경로를 찾아서 from 배열에 저장하여 역추적합니다.
@@ -355,7 +325,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     from[pointList[startId][i].endId] = pointList[startId][i].startId
                     // 업데이트 된 노드의 연결된 노드를 다음부터 탐색하기 위해 추가한다.
                     for (j in pointList[pointList[startId][i].endId]) {
-                        if (j.startId == 18 && endId != 18) { // 18번 건물은 통과할 수 있는 건물이 아니므로 pq에 넣지 않는다.
+                        if ((j.startId == 18 && endId != 18) || (j.startId == 152 && endId != 152)) { // 18번 건물은 통과할 수 있는 건물이 아니므로 pq에 넣지 않는다.
                             continue
                         }
                         pq.add(Temp(j.startId, j.endId, j.weight))
@@ -363,20 +333,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
             }
         }
-        //var temp = 2 // 목적지로부터 역추적, TODO 추후에 여기 파라미터로 받아서 위치 넣어줘야함
         var temp = endId
-        //finalPath.add(2)
         finalPath.add(endId)
         while (true) {
             temp = from[temp]
             finalPath.add(temp)
-            //if (temp == 4) { // 출발지면 탈출, TODO 추후에 여기 파라미터로 받아서 위치 넣어줘야함
             if (temp == startId) {
                 break
             }
         }
         println("최종 경로 : $finalPath")
-        //Log.e("weight sum", dist[2].toString())
         Log.e("weight sum", dist[endId].toString())
 
         //다익스트라로 최단 경로를 찾은 후, 그림을 그려주는 부분
@@ -421,7 +387,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun addWeight() {
         Log.d("addWeight", "addWeight In")
         addPoint(1, 3)
-        addPoint(1, 6)
         addPoint(1, 37)
         addPoint(2, 3)
         addPoint(3, 25)
@@ -456,6 +421,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addPoint(18, 28)
         addPoint(18, 29)
         addPoint(18, 30)
+        addPoint(18, 71)
         addPoint(19, 29)
         addPoint(19, 30)
         addPoint(19, 24)
@@ -472,6 +438,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addPoint(28, 29)
         addPoint(28, 69)
         addPoint(28, 70)
+        addPoint(28, 152)
+        addPoint(28, 156)
         addPoint(29, 30)
         addPoint(30, 31)
         addPoint(31, 32)
@@ -508,26 +476,133 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addPoint(60, 81)
         addPoint(61, 78)
         addPoint(62, 69)
-        addPoint(63, 73)
-        addPoint(63, 76)
-        addPoint(64, 71)
-        addPoint(64, 72)
-        addPoint(64, 74)
+        addPoint(63, 159)
+        addPoint(159, 73)
+        addPoint(159, 76)
+        addPoint(159, 135)
+        addPoint(64, 160)
+        addPoint(160, 71)
+        addPoint(160, 72)
+        addPoint(160, 74)
         addPoint(65, 74)
         addPoint(65, 76)
         addPoint(66, 67)
         addPoint(66, 77)
         addPoint(67, 68)
         addPoint(68, 69)
+        addPoint(69, 156)
         addPoint(70, 71)
         addPoint(70, 72)
         addPoint(71, 75)
         addPoint(72, 73)
+        addPoint(72, 152)
+        addPoint(73, 152)
+        addPoint(73, 158)
         addPoint(74, 75)
+        addPoint(76, 161)
         addPoint(77, 81)
         addPoint(78, 79)
+        addPoint(78, 153)
         addPoint(79, 80)
+        addPoint(79, 154)
         addPoint(80, 81)
+        addPoint(80, 113)
+        addPoint(80, 114)
+        addPoint(80, 155)
+        addPoint(82, 105)
+        addPoint(82, 106)
+        addPoint(83, 109)
+        addPoint(84, 110)
+        addPoint(85, 111)
+        addPoint(85, 112)
+        addPoint(86, 112)
+        addPoint(87, 108)
+        addPoint(88, 107)
+        addPoint(89, 115)
+        addPoint(90, 113)
+        addPoint(90, 118)
+        addPoint(91, 115)
+        addPoint(92, 135)
+        addPoint(93, 133)
+        addPoint(93, 147)
+        addPoint(92, 136)
+        addPoint(94, 125)
+        addPoint(95, 124)
+        addPoint(96, 125)
+        addPoint(97, 126)
+        addPoint(98, 127)
+        addPoint(99, 132)
+        addPoint(100, 134)
+        addPoint(101, 139)
+        addPoint(102, 148)
+        addPoint(103, 140)
+        addPoint(104, 142)
+        addPoint(105, 77)
+        addPoint(105, 106)
+        addPoint(106, 107)
+        addPoint(108, 77)
+        addPoint(108, 109)
+        addPoint(109, 110)
+        addPoint(110, 111)
+        addPoint(111, 112)
+        addPoint(111, 137)
+        addPoint(113, 115)
+        addPoint(113, 116)
+        addPoint(114, 130)
+        addPoint(114, 152)
+        addPoint(114, 155)
+        addPoint(115, 121)
+        addPoint(116, 118)
+        addPoint(117, 118)
+        addPoint(117, 120)
+        addPoint(119, 138)
+        addPoint(119, 120)
+        addPoint(119, 122)
+        addPoint(120, 121)
+        addPoint(121, 122)
+        addPoint(122, 123)
+        addPoint(123, 124)
+        addPoint(123, 128)
+        addPoint(124, 125)
+        addPoint(125, 126)
+        addPoint(126, 127)
+        addPoint(128, 129)
+        addPoint(128, 131)
+        addPoint(129, 130)
+        addPoint(129, 136)
+        addPoint(130, 135)
+        addPoint(130, 152)
+        addPoint(130, 158)
+        addPoint(131, 132)
+        addPoint(132, 134)
+        addPoint(132, 133)
+        addPoint(134, 139)
+        addPoint(135, 149)
+        addPoint(135, 158)
+        addPoint(136, 147)
+        addPoint(137, 138)
+        addPoint(139, 144)
+        addPoint(139, 148)
+        addPoint(140, 148)
+        addPoint(140, 141)
+        addPoint(141, 142)
+        addPoint(142, 143)
+        addPoint(143, 144)
+        addPoint(143, 145)
+        addPoint(145, 147)
+        addPoint(145, 146)
+        //addPoint(146, 149)
+        addPoint(146, 161)
+        addPoint(147, 151)
+        addPoint(149, 150)
+        addPoint(149, 161)
+        addPoint(150, 151)
+        addPoint(152, 153)
+        addPoint(152, 157)
+        addPoint(153, 154)
+        addPoint(153, 157)
+        addPoint(154, 155)
+        addPoint(156, 157)
     }
 
     /**addPoint 함수에서는 점을 잇고 점 사이의 거리를 위도 경도 차로 구해서 가중치로 넣는다.**/
@@ -545,7 +620,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun getHeight(context: Context): Int {
-        var height: Int = 0
+        val height: Int
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val displayMetrics = DisplayMetrics()
             val display = context.display
@@ -592,7 +667,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         GlobalScope.launch {
             delay(100L)
             runOnUiThread {
-                val btlSeongJae = LatLng(36.627628419782376, 127.4528052358374)
+                //val btlSeongJae = LatLng(36.627628419782376, 127.4528052358374)
                 googleMap.apply {
                     Log.e("cur", curLocLat.toString())
                     moveCamera(
