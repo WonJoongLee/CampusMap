@@ -106,6 +106,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val upSize = (screenHeight.toFloat() / 7f) // 화면 중 1/7만큼을 차지하는 윗 부분
         val downSize = (screenHeight.toFloat() / 7f) * 6f // 화면 중 6/7만큼을 차지하는 아래 부분
         binding.comeDownBtn.setOnClickListener {
+            Log.e("comeDownBtn", "Clicked!")
+            Log.d("comeDownBtn", "false")
             binding.comeDownBtn.isClickable = false //뷰에 가려지기 때문에 클릭 못하도록 설정
 
             val upLayout = binding.upLinear//위에서 아래로 내려오는 LinearLayout
@@ -275,6 +277,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         binding.searchRouteBtn.setOnClickListener {
             binding.comeDownBtn.isClickable = true // 다시 뷰에 보이기 때문에 클릭 가능하게 설정
+            Log.d("comeDownBtn", "true")
             binding.upLinear.animate().translationY(-upSize).withLayer().duration = 250
             binding.downLinear.animate().translationY(downSize).withLayer().duration = 250
 
@@ -326,7 +329,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     // 업데이트 된 노드의 연결된 노드를 다음부터 탐색하기 위해 추가한다.
                     for (j in pointList[pointList[startId][i].endId]) {
                         // 18, 152,162,163번 건물은 통과할 수 있는 건물이 아니므로 pq에 넣지 않는다.
-                        if ((j.startId == 18 && endId != 18) || (j.startId == 152 && endId != 152) || (j.startId == 162 && endId != 162) || (j.startId == 163 && endId != 163) || (j.startId == 246 && endId != 246) || (j.startId == 255 && endId != 255) || (j.startId == 236 && endId != 236) || (j.startId == 267 && endId != 267)) {
+                        if ((j.startId == 18 && endId != 18) || (j.startId == 152 && endId != 152) || (j.startId == 162 && endId != 162) || (j.startId == 163 && endId != 163) || (j.startId == 246 && endId != 246) || (j.startId == 255 && endId != 255) || (j.startId == 236 && endId != 236) || (j.startId == 267 && endId != 267)|| (j.startId == 14 && endId != 14)|| (j.startId == 22 && endId != 22)) {
                             continue
                         }
                         pq.add(Temp(j.startId, j.endId, j.weight))
@@ -385,6 +388,111 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mMap.addMarker(markerOption)
     }
 
+    /**addPoint 함수에서는 점을 잇고 점 사이의 거리를 위도 경도 차로 구해서 가중치로 넣는다.**/
+    private fun addPoint(startId: Int, endId: Int) {
+        val startLoc = Location("Start Point")
+        startLoc.latitude = coordinateList[startId - 1].latitude
+        startLoc.longitude = coordinateList[startId - 1].longitude
+        val endLoc = Location("End Point")
+        endLoc.latitude = coordinateList[endId - 1].latitude
+        endLoc.longitude = coordinateList[endId - 1].longitude
+
+        val distance = startLoc.distanceTo(endLoc).toInt() // 두 점 사이의 거리를 미터(Int)로 바꿔 가중치로 넣는다.
+        pointList[startId].add(Temp(startId, endId, distance))
+        pointList[endId].add(Temp(endId, startId, distance))
+    }
+
+    private fun getHeight(context: Context): Int {
+        val height: Int
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val displayMetrics = DisplayMetrics()
+            val display = context.display
+            display!!.getRealMetrics(displayMetrics)
+            displayMetrics.heightPixels
+        } else {
+            val displayMetrics = DisplayMetrics()
+            this.windowManager.defaultDisplay.getMetrics(displayMetrics)
+            height = displayMetrics.heightPixels
+            height
+        }
+    }
+
+    //액티비티 시작할 때 권한 없으면 물어보고, 승인을 해주면 해당 위치로 이동
+    //권한이 있다면 그냥 해당위치로 이동
+    override fun onResume() {
+        super.onResume()
+
+        var curLocLat = 0.0
+        var curLocLng=0.0
+
+        //권한 요청하는 부분
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                fineLocation
+            )
+
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION),
+                coarseLocation
+            )
+            //return
+        }else{
+            fusedLocationClient.lastLocation
+                .addOnSuccessListener { location: Location? ->
+                    Log.e("?", location?.latitude.toString())
+                    curLocLat = location?.latitude ?: 36.62905249003887 // 충북대학교 좌표
+                    curLocLng = location?.longitude ?: 127.45629718340625
+                    Log.e("Current Location", "${curLocLat}, $curLocLng")
+                }
+        }
+
+        GlobalScope.launch {
+            delay(100L)
+            runOnUiThread {
+                mMap.apply {
+                    Log.e("cur", curLocLat.toString())
+                    moveCamera(
+                        CameraUpdateFactory.newLatLngZoom(
+                            LatLng(curLocLat, curLocLng),
+                            16.0f
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+
+    override fun onMapReady(googleMap: GoogleMap) {
+        mMap = googleMap // 변수 googleMap 초기화
+    }
+
+
+    override fun onBackPressed() {
+        val screenHeight = getHeight(baseContext)
+        val upSize = (screenHeight.toFloat() / 7f) // 화면 중 1/7만큼을 차지하는 윗 부분
+        val downSize = (screenHeight.toFloat() / 7f) * 6f // 화면 중 6/7만큼을 차지하는 아래 부분
+        if (cameDown) {
+            binding.upLinear.animate().translationY(-upSize).withLayer().duration = 500
+            binding.downLinear.animate().translationY(downSize).withLayer().duration = 500
+            binding.comeDownBtn.isClickable = true // 다시 뷰에 보이기 때문에 클릭 가능하게 설정
+            Log.d("comeDownBtn", "true")
+            cameDown = false
+        } else {
+            super.onBackPressed()
+        }
+    }
 
     private fun addWeight() {
         Log.d("addWeight", "addWeight In")
@@ -431,7 +539,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addPoint(20, 24)
         addPoint(20, 31)
         addPoint(21, 32)
-        addPoint(22, 23)
         addPoint(22, 33)
         addPoint(22, 34)
         addPoint(24, 30)
@@ -439,9 +546,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addPoint(27, 28)
         addPoint(28, 29)
         addPoint(28, 69)
-        addPoint(28, 70)
         addPoint(28, 152)
         addPoint(28, 156)
+        addPoint(28, 279)
+        addPoint(278, 279)
+        addPoint(279, 70)
         addPoint(29, 30)
         addPoint(30, 31)
         addPoint(31, 32)
@@ -629,7 +738,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addPoint(169, 170)
         addPoint(170, 75)
         addPoint(170, 171)
-        addPoint(171, 172)
+        addPoint(276, 277)
+        addPoint(171, 277)
+        addPoint(172, 277)
         addPoint(172, 173)
         addPoint(173, 174)
         addPoint(173, 186)
@@ -670,6 +781,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addPoint(202, 203)
         addPoint(203, 213)
         addPoint(213, 214)
+        addPoint(213, 275)
         addPoint(214, 215)
         addPoint(215, 207)
         addPoint(201, 208)
@@ -772,104 +884,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addPoint(268, 267)
         addPoint(268, 270)
         addPoint(270, 271)
-    }
-
-    /**addPoint 함수에서는 점을 잇고 점 사이의 거리를 위도 경도 차로 구해서 가중치로 넣는다.**/
-    private fun addPoint(startId: Int, endId: Int) {
-        val startLoc = Location("Start Point")
-        startLoc.latitude = coordinateList[startId - 1].latitude
-        startLoc.longitude = coordinateList[startId - 1].longitude
-        val endLoc = Location("End Point")
-        endLoc.latitude = coordinateList[endId - 1].latitude
-        endLoc.longitude = coordinateList[endId - 1].longitude
-
-        val distance = startLoc.distanceTo(endLoc).toInt() // 두 점 사이의 거리를 미터(Int)로 바꿔 가중치로 넣는다.
-        pointList[startId].add(Temp(startId, endId, distance))
-        pointList[endId].add(Temp(endId, startId, distance))
-    }
-
-    private fun getHeight(context: Context): Int {
-        val height: Int
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val displayMetrics = DisplayMetrics()
-            val display = context.display
-            display!!.getRealMetrics(displayMetrics)
-            displayMetrics.heightPixels
-        } else {
-            val displayMetrics = DisplayMetrics()
-            this.windowManager.defaultDisplay.getMetrics(displayMetrics)
-            height = displayMetrics.heightPixels
-            height
-        }
-    }
-
-
-    override fun onMapReady(googleMap: GoogleMap) {
-        var curLocLat = 36.62901804982402
-        var curLocLng = 127.45631864038594
-
-        mMap = googleMap // 변수 googleMap 초기화
-
-        //권한 요청하는 부분
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                fineLocation
-            )
-
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION),
-                coarseLocation
-            )
-            return
-        }
-
-        GlobalScope.launch {
-            delay(100L)
-            runOnUiThread {
-                //val btlSeongJae = LatLng(36.627628419782376, 127.4528052358374)
-                googleMap.apply {
-                    Log.e("cur", curLocLat.toString())
-                    moveCamera(
-                        CameraUpdateFactory.newLatLngZoom(
-                            LatLng(curLocLat, curLocLng),
-                            16.0f
-                        )
-                    )
-                }
-            }
-        }
-
-        fusedLocationClient.lastLocation
-            .addOnSuccessListener { location: Location? ->
-                Log.e("?", location?.latitude.toString())
-                curLocLat = location?.latitude ?: 36.62905249003887 // 충북대학교 좌표
-                curLocLng = location?.longitude ?: 127.45629718340625
-                Log.e("Current Location", "${curLocLat}, $curLocLng")
-            }
-    }
-
-
-    override fun onBackPressed() {
-        val screenHeight = getHeight(baseContext)
-        val upSize = (screenHeight.toFloat() / 7f) // 화면 중 1/7만큼을 차지하는 윗 부분
-        val downSize = (screenHeight.toFloat() / 7f) * 6f // 화면 중 6/7만큼을 차지하는 아래 부분
-        if (cameDown) {
-            binding.upLinear.animate().translationY(-upSize).withLayer().duration = 500
-            binding.downLinear.animate().translationY(downSize).withLayer().duration = 500
-            binding.comeDownBtn.isClickable = true // 다시 뷰에 보이기 때문에 클릭 가능하게 설정
-            cameDown = false
-        } else {
-            super.onBackPressed()
-        }
+        addPoint(274, 22)
+        addPoint(274, 264)
+        addPoint(274, 33)
+        addPoint(274, 261)
+        addPoint(274, 262)
+        addPoint(274, 23)
     }
 }
