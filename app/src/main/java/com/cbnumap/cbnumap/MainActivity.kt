@@ -17,6 +17,7 @@ import android.util.Log
 import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import com.cbnumap.cbnumap.databinding.ActivityMainBinding
 import com.cbnumap.cbnumap.server.Coordinate
@@ -64,6 +65,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     //뷰가 화면에 보이는지 여부
     private var cameDown =
         false // camedown이 false면 화면이 내려와있지 않은 상태고, camedown이 true면 화면이 내려와 있는 상태다.
+    private var predictedTimeVisible = false // false면 예상 소요시간 레이아웃이 보이지 않는 상태고, true면 예상 소요시간 레이아웃이 보이는 상태입니다.
+
+    //routeInfoLinearLayout이 얼마나 놔와야 하는지 구하기 위한 width
+    private var routeLayoutWidth = 0F
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -108,7 +113,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val downSize = (screenHeight.toFloat() / 7f) * 6f // 화면 중 6/7만큼을 차지하는 아래 부분
         binding.comeDownBtn.setOnClickListener {
             Log.e("comeDownBtn", "Clicked!")
-            Log.d("comeDownBtn", "false")
             binding.comeDownBtn.isClickable = false //뷰에 가려지기 때문에 클릭 못하도록 설정
 
             val upLayout = binding.upLinear//위에서 아래로 내려오는 LinearLayout
@@ -121,6 +125,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             Log.e("screenHeight", screenHeight.toString())
             Log.e("upSize", upSize.toString())
             Log.e("downSize", downSize.toString())
+
+            // 길 찾기 하는 상황에서 예상 소요시간은 보이면 안되므로 다시 집어 넣음.
+            if(predictedTimeVisible){
+                binding.routeInfoLinearLayout.animate().translationX(routeLayoutWidth).withLayer().duration =
+                    250
+                predictedTimeVisible = false
+            }
 
             if (!cameDown) {
                 binding.upLinear.animate().translationY(upSize).withLayer().duration = 500
@@ -204,16 +215,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     break // 원하는 값을 찾았으므로 탈출
                 }
             }
-            if (startPosInputted && endPosInputted) {
-                mMap.clear() // 기존에 그려져 있던 라인들을 지우고 다시 findpath를 한다.
-                findPath(startPosId, endPosId)
-                startPosString = ""
-                endPosString = ""
-                startPosInputted = false
-                endPosInputted = false
-                startPosId = -1
-                endPosId = -1
-            }
+//            if (startPosInputted && endPosInputted) {
+//                mMap.clear() // 기존에 그려져 있던 라인들을 지우고 다시 findpath를 한다.
+//                findPath(startPosId, endPosId)
+//                startPosString = ""
+//                endPosString = ""
+//                startPosInputted = false
+//                endPosInputted = false
+//                startPosId = -1
+//                endPosId = -1
+//            }
         }
 
         //도착지가 다 입력되었으면 처리할 곳
@@ -263,20 +274,37 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     break // 원하는 값을 찾았으므로 탈출
                 }
             }
-            if (startPosInputted && endPosInputted) {
-                mMap.clear() // 기존에 그려져 있던 라인들을 지우고 다시 findpath를 한다.
-                findPath(startPosId, endPosId)
-                //한 번 찾고 나서, 다시 찾을 수 있는 환경을 제공하기 위해 모든 값을 default 값으로 다시 설정한다.
-                startPosString = ""
-                endPosString = ""
-                startPosInputted = false
-                endPosInputted = false
-                startPosId = -1
-                endPosId = -1
-            }
+//            if (startPosInputted && endPosInputted) {
+//                mMap.clear() // 기존에 그려져 있던 라인들을 지우고 다시 findpath를 한다.
+//                findPath(startPosId, endPosId)
+//                //한 번 찾고 나서, 다시 찾을 수 있는 환경을 제공하기 위해 모든 값을 default 값으로 다시 설정한다.
+//                startPosString = ""
+//                endPosString = ""
+//                startPosInputted = false
+//                endPosInputted = false
+//                startPosId = -1
+//                endPosId = -1
+//            }
         }
 
         binding.searchRouteBtn.setOnClickListener {
+            if (startPosInputted && endPosInputted) {
+                mMap.clear() // 기존에 그려져 있던 라인들을 지우고 다시 findpath를 한다.
+                findPath(startPosId, endPosId)
+//                startPosString = ""
+//                endPosString = ""
+//                startPosInputted = false
+//                endPosInputted = false
+//                startPosId = -1
+//                endPosId = -1
+            } else if (startPosInputted && !endPosInputted) {
+                Toast.makeText(baseContext, "도착점을 입력해주세요!", Toast.LENGTH_SHORT).show()
+            } else if (!startPosInputted && endPosInputted) {
+                Toast.makeText(baseContext, "시작점을 입력해주세요!", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(baseContext, "도착점과 시작점을 입력해주세요!", Toast.LENGTH_SHORT).show()
+            }
+
             binding.comeDownBtn.isClickable = true // 다시 뷰에 보이기 때문에 클릭 가능하게 설정
             Log.d("comeDownBtn", "true")
             binding.upLinear.animate().translationY(-upSize).withLayer().duration = 250
@@ -288,9 +316,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             binding.findRouteText.text = "경로를 입력해주세요!"
 
 
-            binding.predictTimeTextView.text = "예상 소요시간 : 3분" // TODO 시간 계산해서 넣기
-            binding.routeInfoLinearLayout.animate().translationX(-400F).withLayer().duration =
+            Log.e("endPosId", dist[endPosId].toString())
+            Log.e("end weight sum", (dist[endPosId] / 4000 * 60).toString())
+            binding.predictTimeTextView.text =
+                "예상 소요시간 : ${(dist[endPosId].toFloat() / 3250F * 60F).toInt()}분" // 걷는 속도를 시속 3.25km로 잡음.
+            routeLayoutWidth = binding.predictTimeTextView.width.toFloat()
+            binding.routeInfoLinearLayout.animate().translationX(-routeLayoutWidth).withLayer().duration =
                 250
+            predictedTimeVisible = true // routeInfoLinearLayout이 다시 보이는 쪽으로 나왔으므로 예상 소요시간을 보여준다.
+            startPosString = ""
+            endPosString = ""
+            startPosInputted = false
+            endPosInputted = false
+            startPosId = -1
+            endPosId = -1
         }
 
         addWeight()
@@ -550,6 +589,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addPoint(24, 30)
         addPoint(25, 34)
         addPoint(27, 28)
+        addPoint(27, 35)
         addPoint(28, 29)
         addPoint(28, 69)
         addPoint(28, 152)
