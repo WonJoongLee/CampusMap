@@ -37,6 +37,7 @@ import java.util.*
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
+    private lateinit var binding: ActivityMainBinding
     private lateinit var polyLine: Polyline
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -60,9 +61,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private val from = IntArray(99999) { -1 } // 이전 점(위치)를 저장하기 위한 배열
     private val finalPath = mutableListOf<Int>()
 
+    //뷰가 화면에 보이는지 여부
     private var cameDown =
         false // camedown이 false면 화면이 내려와있지 않은 상태고, camedown이 true면 화면이 내려와 있는 상태다.
-    private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -285,6 +286,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             startPosATV.setText("")
             endPosATV.setText("")
             binding.findRouteText.text = "경로를 입력해주세요!"
+
+
+            binding.predictTimeTextView.text = "예상 소요시간 : 3분" // TODO 시간 계산해서 넣기
+            binding.routeInfoLinearLayout.animate().translationX(-400F).withLayer().duration =
+                250
         }
 
         addWeight()
@@ -329,7 +335,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     // 업데이트 된 노드의 연결된 노드를 다음부터 탐색하기 위해 추가한다.
                     for (j in pointList[pointList[startId][i].endId]) {
                         // 18, 152,162,163번 건물은 통과할 수 있는 건물이 아니므로 pq에 넣지 않는다.
-                        if ((j.startId == 18 && endId != 18) || (j.startId == 152 && endId != 152) || (j.startId == 162 && endId != 162) || (j.startId == 163 && endId != 163) || (j.startId == 246 && endId != 246) || (j.startId == 255 && endId != 255) || (j.startId == 236 && endId != 236) || (j.startId == 267 && endId != 267)|| (j.startId == 14 && endId != 14)|| (j.startId == 22 && endId != 22)) {
+                        if ((j.startId == 18 && endId != 18) || (j.startId == 152 && endId != 152) || (j.startId == 162 && endId != 162) || (j.startId == 163 && endId != 163) || (j.startId == 246 && endId != 246) || (j.startId == 255 && endId != 255) || (j.startId == 236 && endId != 236) || (j.startId == 267 && endId != 267) || (j.startId == 14 && endId != 14) || (j.startId == 22 && endId != 22)) {
                             continue
                         }
                         pq.add(Temp(j.startId, j.endId, j.weight))
@@ -423,7 +429,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         super.onResume()
 
         var curLocLat = 0.0
-        var curLocLng=0.0
+        var curLocLng = 0.0
 
         //권한 요청하는 부분
         if (ActivityCompat.checkSelfPermission(
@@ -447,7 +453,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 coarseLocation
             )
             //return
-        }else{
+        } else {
             fusedLocationClient.lastLocation
                 .addOnSuccessListener { location: Location? ->
                     Log.e("?", location?.latitude.toString())

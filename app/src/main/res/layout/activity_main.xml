@@ -35,6 +35,33 @@
 
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/routeInfoLinearLayout"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/predicted_time_background"
+        app:layout_constraintLeft_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:orientation="vertical"
+        android:elevation="10dp"
+        android:layout_marginTop="20dp"
+        >
+
+        <TextView
+            android:id="@+id/predictTimeTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="예상 소요 시간 : 30분"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="5dp"
+            />
+
+    </LinearLayout>
+
+
     <fragment
         android:id="@+id/mapFragment"
         android:name="com.google.android.gms.maps.SupportMapFragment"
