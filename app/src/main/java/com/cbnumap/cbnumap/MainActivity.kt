@@ -274,29 +274,41 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     break // 원하는 값을 찾았으므로 탈출
                 }
             }
-//            if (startPosInputted && endPosInputted) {
-//                mMap.clear() // 기존에 그려져 있던 라인들을 지우고 다시 findpath를 한다.
-//                findPath(startPosId, endPosId)
-//                //한 번 찾고 나서, 다시 찾을 수 있는 환경을 제공하기 위해 모든 값을 default 값으로 다시 설정한다.
-//                startPosString = ""
-//                endPosString = ""
-//                startPosInputted = false
-//                endPosInputted = false
-//                startPosId = -1
-//                endPosId = -1
-//            }
         }
 
         binding.searchRouteBtn.setOnClickListener {
             if (startPosInputted && endPosInputted) {
                 mMap.clear() // 기존에 그려져 있던 라인들을 지우고 다시 findpath를 한다.
-                findPath(startPosId, endPosId)
-//                startPosString = ""
-//                endPosString = ""
-//                startPosInputted = false
-//                endPosInputted = false
-//                startPosId = -1
-//                endPosId = -1
+                if(startPosString == endPosString){
+                    Toast.makeText(baseContext, "시작점과 도착점이 같습니다.\n다시 확인해주세요.", Toast.LENGTH_SHORT).show()
+                }else{
+                    findPath(startPosId, endPosId)
+                    binding.comeDownBtn.isClickable = true // 다시 뷰에 보이기 때문에 클릭 가능하게 설정
+                    Log.d("comeDownBtn", "true")
+                    binding.upLinear.animate().translationY(-upSize).withLayer().duration = 250
+                    binding.downLinear.animate().translationY(downSize).withLayer().duration = 250
+
+                    cameDown = false
+                    startPosATV.setText("")
+                    endPosATV.setText("")
+                    binding.findRouteText.text = "경로를 입력해주세요!"
+
+
+                    Log.e("endPosId", dist[endPosId].toString())
+                    Log.e("end weight sum", (dist[endPosId] / 4000 * 60).toString())
+                    binding.predictTimeTextView.text =
+                        "예상 소요시간 : ${(dist[endPosId].toFloat() / 3250F * 60F).toInt()}분" // 걷는 속도를 시속 3.25km로 잡음.
+                    routeLayoutWidth = binding.predictTimeTextView.width.toFloat()
+                    binding.routeInfoLinearLayout.animate().translationX(-routeLayoutWidth).withLayer().duration =
+                        250
+                    predictedTimeVisible = true // routeInfoLinearLayout이 다시 보이는 쪽으로 나왔으므로 예상 소요시간을 보여준다.
+                    startPosString = ""
+                    endPosString = ""
+                    startPosInputted = false
+                    endPosInputted = false
+                    startPosId = -1
+                    endPosId = -1
+                }
             } else if (startPosInputted && !endPosInputted) {
                 Toast.makeText(baseContext, "도착점을 입력해주세요!", Toast.LENGTH_SHORT).show()
             } else if (!startPosInputted && endPosInputted) {
@@ -304,32 +316,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             } else {
                 Toast.makeText(baseContext, "도착점과 시작점을 입력해주세요!", Toast.LENGTH_SHORT).show()
             }
-
-            binding.comeDownBtn.isClickable = true // 다시 뷰에 보이기 때문에 클릭 가능하게 설정
-            Log.d("comeDownBtn", "true")
-            binding.upLinear.animate().translationY(-upSize).withLayer().duration = 250
-            binding.downLinear.animate().translationY(downSize).withLayer().duration = 250
-
-            cameDown = false
-            startPosATV.setText("")
-            endPosATV.setText("")
-            binding.findRouteText.text = "경로를 입력해주세요!"
-
-
-            Log.e("endPosId", dist[endPosId].toString())
-            Log.e("end weight sum", (dist[endPosId] / 4000 * 60).toString())
-            binding.predictTimeTextView.text =
-                "예상 소요시간 : ${(dist[endPosId].toFloat() / 3250F * 60F).toInt()}분" // 걷는 속도를 시속 3.25km로 잡음.
-            routeLayoutWidth = binding.predictTimeTextView.width.toFloat()
-            binding.routeInfoLinearLayout.animate().translationX(-routeLayoutWidth).withLayer().duration =
-                250
-            predictedTimeVisible = true // routeInfoLinearLayout이 다시 보이는 쪽으로 나왔으므로 예상 소요시간을 보여준다.
-            startPosString = ""
-            endPosString = ""
-            startPosInputted = false
-            endPosInputted = false
-            startPosId = -1
-            endPosId = -1
         }
 
         addWeight()
