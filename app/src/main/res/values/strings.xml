@@ -1,4 +1,9 @@
 <resources>
     <string name="app_name">CBNUMap</string>
     <string name="maps_api_key">CBNUMap</string>
+    
+    <string-array name="location">
+        <item>School</item>
+        <item>ETC</item>
+    </string-array>
 </resources>

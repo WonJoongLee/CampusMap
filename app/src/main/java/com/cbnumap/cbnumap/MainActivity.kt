@@ -1,6 +1,7 @@
 package com.cbnumap.cbnumap
 
 import android.Manifest
+import android.animation.Animator
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Typeface
@@ -15,6 +16,7 @@ import android.text.style.StyleSpan
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.View
+import android.view.ViewAnimationUtils
 import android.view.WindowManager
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
@@ -23,6 +25,7 @@ import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContentProviderCompat.requireContext
 import com.cbnumap.cbnumap.databinding.ActivityMainBinding
 import com.cbnumap.cbnumap.server.Coordinate
 import com.cbnumap.cbnumap.server.CoordinateDB
@@ -37,6 +40,7 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import kotlinx.coroutines.*
+import java.lang.Math.hypot
 import java.lang.Runnable
 import java.util.*
 
@@ -79,7 +83,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private val rotateClose : Animation by lazy { AnimationUtils.loadAnimation(this, R.anim.rotate_close_anim)}
     private val fromBottom : Animation by lazy { AnimationUtils.loadAnimation(this, R.anim.from_bottom_anim)}
     private val toBottom : Animation by lazy { AnimationUtils.loadAnimation(this, R.anim.to_bottom_anim)}
-    private var clicked = false // FAB 아이콘들이 나왔는지 안나왔는지 확인하기 위한 변수
+    private var fabClicked = false // FAB 아이콘들이 나왔는지 안나왔는지 확인하기 위한 변수
+    private var isBuildingListOpen = false // buildinglist가 현재 화면에 보이는지 여부
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -119,6 +124,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             return
         }
 
+        val locations = resources.getStringArray(R.array.location)
+        val arrayAdapter = ArrayAdapter(baseContext, R.layout.dropdown_item, locations)
+        binding.autoCompleteTextView.setAdapter(arrayAdapter)
+
         binding.infoFAB.setOnClickListener{
             onInfoButtonClicked()
         }
@@ -126,6 +135,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         binding.showListFAB.setOnClickListener{
             Toast.makeText(baseContext, "눌려짐", Toast.LENGTH_SHORT).show()
             onInfoButtonClicked()
+            showBuildingList()
         }
 
         val upSize = (screenHeight.toFloat() / 7f) // 화면 중 1/7만큼을 차지하는 윗 부분
@@ -361,11 +371,47 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addWeight()
     }
 
+    private fun showBuildingList(){
+        val centerX = binding.showListFAB.x + binding.showListFAB.width / 2
+        val centerY = binding.showListFAB.y + binding.showListFAB.height / 2
+
+        val radius = hypot(binding.buildingList.width.toDouble(), binding.buildingList.height.toDouble())
+        if(isBuildingListOpen){ // 만약 building list가 보여지고 있는 상황이었다면
+            //binding.showListFAB.backgroundTintList =
+            val revealAnimator : Animator = ViewAnimationUtils.createCircularReveal(binding.buildingList, centerX.toInt(), centerY.toInt(), radius.toFloat(), 0F)
+            revealAnimator.addListener(object: Animator.AnimatorListener{
+                override fun onAnimationStart(p0: Animator?) {}
+
+                override fun onAnimationEnd(p0: Animator?) {
+                    binding.buildingList.visibility = View.INVISIBLE
+                }
+
+                override fun onAnimationCancel(p0: Animator?) {}
+
+                override fun onAnimationRepeat(p0: Animator?) {}
+            })
+            revealAnimator.duration = 300
+            revealAnimator.start()
+        }else{
+            val revealAnimator : Animator = ViewAnimationUtils.createCircularReveal(
+                binding.buildingList,
+                centerX.toInt(),
+                centerY.toInt(),
+                0F,
+                radius.toFloat()
+            )
+            revealAnimator.duration = 300
+            binding.buildingList.visibility = View.VISIBLE
+            revealAnimator.start()
+        }
+        isBuildingListOpen = !isBuildingListOpen
+    }
+
     private fun onInfoButtonClicked() {
-        setFABsVisibility(clicked)
-        setFABsAnimation(clicked)
-        setFABsClickable(clicked)
-        clicked = !clicked
+        setFABsVisibility(fabClicked)
+        setFABsAnimation(fabClicked)
+        setFABsClickable(fabClicked)
+        fabClicked = !fabClicked
     }
 
     private fun setFABsVisibility(clicked : Boolean) {
@@ -529,6 +575,21 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    private fun getWidth(context: Context): Int {
+        val width: Int
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val displayMetrics = DisplayMetrics()
+            val display = context.display
+            display!!.getRealMetrics(displayMetrics)
+            displayMetrics.widthPixels
+        } else {
+            val displayMetrics = DisplayMetrics()
+            this.windowManager.defaultDisplay.getMetrics(displayMetrics)
+            width = displayMetrics.widthPixels
+            width
+        }
+    }
+
     //액티비티 시작할 때 권한 없으면 물어보고, 승인을 해주면 해당 위치로 이동
     //권한이 있다면 그냥 해당위치로 이동
     override fun onResume() {
@@ -595,13 +656,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val screenHeight = getHeight(baseContext)
         val upSize = (screenHeight.toFloat() / 7f) // 화면 중 1/7만큼을 차지하는 윗 부분
         val downSize = (screenHeight.toFloat() / 7f) * 6f // 화면 중 6/7만큼을 차지하는 아래 부분
-        if (cameDown) {
-            binding.upLinear.animate().translationY(-upSize).withLayer().duration = 500
-            binding.downLinear.animate().translationY(downSize).withLayer().duration = 500
-            binding.findRouteFAB.isClickable = true // 다시 뷰에 보이기 때문에 클릭 가능하게 설정
-            cameDown = false
-        } else {
-            super.onBackPressed()
+        when {
+            cameDown -> {
+                binding.upLinear.animate().translationY(-upSize).withLayer().duration = 500
+                binding.downLinear.animate().translationY(downSize).withLayer().duration = 500
+                binding.findRouteFAB.isClickable = true // 다시 뷰에 보이기 때문에 클릭 가능하게 설정
+                cameDown = false
+            }
+            isBuildingListOpen -> {
+                showBuildingList()
+            }
+            else -> {
+                super.onBackPressed()
+            }
         }
     }
 
@@ -610,6 +677,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addPoint(1, 3)
         addPoint(1, 37)
         addPoint(2, 3)
+        addPoint(2, 17)
         addPoint(3, 25)
         addPoint(3, 36)
         addPoint(4, 7)
