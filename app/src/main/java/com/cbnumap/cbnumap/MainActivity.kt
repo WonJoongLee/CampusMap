@@ -15,6 +15,7 @@ import android.text.style.StyleSpan
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Toast
@@ -75,7 +76,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        //키보드가 아래서 위로 올라올 때 레이아웃도 같이 딸려 올라가는 것을 바
+        //키보드가 아래서 위로 올라올 때 레이아웃도 같이 딸려 올라가는 것을 방지
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
 
         // Get the SupportMapFragment and request notification when the map is ready to be used.
@@ -198,9 +199,40 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         var endPosId = -1 // 도착점 id
 
         //출발 지점이 다 입력되었으면 처리할 곳
+        //item이 눌러졌을 때 처리
         startPosATV.setOnItemClickListener { adapterView, view, position, id ->
             startPosString = startPosATV.text.toString()
-            binding.findRouteText.text = "${startPosString}에서부터 ${endPosString}까지의 경로를 찾습니다."
+            val routeStr = SpannableString("${startPosString}에서부터 ${endPosString}까지의 경로를 찾습니다.")
+            routeStr.setSpan(
+                StyleSpan(Typeface.BOLD),
+                0,
+                startPosString.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                routeStr.setSpan(
+                    ForegroundColorSpan(applicationContext.getColor(R.color.crimson)),
+                    0,
+                    startPosString.length,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+            routeStr.setSpan(
+                StyleSpan(Typeface.BOLD),
+                startPosString.length + 5,
+                startPosString.length + endPosString.length + 5,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                routeStr.setSpan(
+                    ForegroundColorSpan(applicationContext.getColor(R.color.crimson)),
+                    startPosString.length + 5,
+                    startPosString.length + endPosString.length + 5,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+            binding.findRouteText.text = routeStr
+            //binding.findRouteText.text = "${startPosString}에서부터 ${endPosString}까지의 경로를 찾습니다."
             for (i in coordinateList) {
                 // 사용자가 건물명(kor_name)을 넣었다면 건물명 중에 일치하는 값이 있는지 비교
                 if (i.kor_name == startPosString) {
@@ -215,16 +247,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     break // 원하는 값을 찾았으므로 탈출
                 }
             }
-//            if (startPosInputted && endPosInputted) {
-//                mMap.clear() // 기존에 그려져 있던 라인들을 지우고 다시 findpath를 한다.
-//                findPath(startPosId, endPosId)
-//                startPosString = ""
-//                endPosString = ""
-//                startPosInputted = false
-//                endPosInputted = false
-//                startPosId = -1
-//                endPosId = -1
-//            }
+            val manager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+            manager.hideSoftInputFromWindow(currentFocus!!.windowToken, InputMethodManager.HIDE_NOT_ALWAYS)
         }
 
         //도착지가 다 입력되었으면 처리할 곳
@@ -274,6 +298,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     break // 원하는 값을 찾았으므로 탈출
                 }
             }
+            val manager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+            manager.hideSoftInputFromWindow(currentFocus!!.windowToken, InputMethodManager.HIDE_NOT_ALWAYS)
         }
 
         binding.searchRouteBtn.setOnClickListener {
