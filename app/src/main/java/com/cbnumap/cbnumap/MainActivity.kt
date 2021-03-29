@@ -14,7 +14,10 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.util.DisplayMetrics
 import android.util.Log
+import android.view.View
 import android.view.WindowManager
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
 import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
@@ -71,6 +74,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     //routeInfoLinearLayout이 얼마나 놔와야 하는지 구하기 위한 width
     private var routeLayoutWidth = 0F
 
+    //FAB 버튼 관련 애니메이션 부분
+    private val rotateOpen : Animation by lazy { AnimationUtils.loadAnimation(this, R.anim.rotate_open_anim)}
+    private val rotateClose : Animation by lazy { AnimationUtils.loadAnimation(this, R.anim.rotate_close_anim)}
+    private val fromBottom : Animation by lazy { AnimationUtils.loadAnimation(this, R.anim.from_bottom_anim)}
+    private val toBottom : Animation by lazy { AnimationUtils.loadAnimation(this, R.anim.to_bottom_anim)}
+    private var clicked = false // FAB 아이콘들이 나왔는지 안나왔는지 확인하기 위한 변수
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -109,24 +119,28 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             return
         }
 
+        binding.infoFAB.setOnClickListener{
+            onInfoButtonClicked()
+        }
+
+        binding.showListFAB.setOnClickListener{
+            Toast.makeText(baseContext, "눌려짐", Toast.LENGTH_SHORT).show()
+            onInfoButtonClicked()
+        }
 
         val upSize = (screenHeight.toFloat() / 7f) // 화면 중 1/7만큼을 차지하는 윗 부분
         val downSize = (screenHeight.toFloat() / 7f) * 6f // 화면 중 6/7만큼을 차지하는 아래 부분
-        binding.comeDownBtn.setOnClickListener {
-            Log.e("comeDownBtn", "Clicked!")
-            binding.comeDownBtn.isClickable = false //뷰에 가려지기 때문에 클릭 못하도록 설정
+        val upLayout = binding.upLinear//위에서 아래로 내려오는 LinearLayout
+        val upParams = upLayout.layoutParams
+        upParams.height = upSize.toInt() // layout height를 내려올 만큼으로 바꿈
 
-            val upLayout = binding.upLinear//위에서 아래로 내려오는 LinearLayout
-            val upParams = upLayout.layoutParams
-            upParams.height = upSize.toInt() // layout height를 내려올 만큼으로 바꿈
-
-            val downLayout = binding.downLinear // 아래에서 위로 올라오는 LinearLayout
-            val downParams = downLayout.layoutParams
-            downParams.height = downSize.toInt() // layout height를 내려올 만큼으로 바꿈
-            Log.e("screenHeight", screenHeight.toString())
-            Log.e("upSize", upSize.toString())
-            Log.e("downSize", downSize.toString())
-
+        val downLayout = binding.downLinear // 아래에서 위로 올라오는 LinearLayout
+        val downParams = downLayout.layoutParams
+        downParams.height = downSize.toInt() // layout height를 내려올 만큼으로 바꿈
+        Log.e("downParams.height", downParams.height.toString())
+        binding.findRouteFAB.setOnClickListener {
+            onInfoButtonClicked()
+            binding.findRouteFAB.isClickable = false //뷰에 가려지기 때문에 클릭 못하도록 설정
             // 길 찾기 하는 상황에서 예상 소요시간은 보이면 안되므로 다시 집어 넣음.
             if(predictedTimeVisible){
                 binding.routeInfoLinearLayout.animate().translationX(routeLayoutWidth).withLayer().duration =
@@ -136,7 +150,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
             if (!cameDown) {
                 binding.upLinear.animate().translationY(upSize).withLayer().duration = 500
-                binding.comeDownBtn.text = "길찾기" // 이상하게 이 부분을 삭제하면 안됨
+                //binding.comeDownBtn.text = "길찾기" // 이상하게 이 부분을 삭제하면 안됨
+                Log.e("upSize1", upSize.toString())
+                Log.e("downSize1", downSize.toString())
                 binding.downLinear.animate().translationY(-downSize).withLayer().duration = 500
                 cameDown = true
             } else {
@@ -232,7 +248,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 )
             }
             binding.findRouteText.text = routeStr
-            //binding.findRouteText.text = "${startPosString}에서부터 ${endPosString}까지의 경로를 찾습니다."
             for (i in coordinateList) {
                 // 사용자가 건물명(kor_name)을 넣었다면 건물명 중에 일치하는 값이 있는지 비교
                 if (i.kor_name == startPosString) {
@@ -309,8 +324,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     Toast.makeText(baseContext, "시작점과 도착점이 같습니다.\n다시 확인해주세요.", Toast.LENGTH_SHORT).show()
                 }else{
                     findPath(startPosId, endPosId)
-                    binding.comeDownBtn.isClickable = true // 다시 뷰에 보이기 때문에 클릭 가능하게 설정
-                    Log.d("comeDownBtn", "true")
+                    binding.findRouteFAB.isClickable = true // 다시 뷰에 보이기 때문에 클릭 가능하게 설정
                     binding.upLinear.animate().translationY(-upSize).withLayer().duration = 250
                     binding.downLinear.animate().translationY(downSize).withLayer().duration = 250
 
@@ -346,6 +360,47 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         addWeight()
     }
+
+    private fun onInfoButtonClicked() {
+        setFABsVisibility(clicked)
+        setFABsAnimation(clicked)
+        setFABsClickable(clicked)
+        clicked = !clicked
+    }
+
+    private fun setFABsVisibility(clicked : Boolean) {
+        if(!clicked){
+            binding.findRouteFAB.visibility = View.VISIBLE
+            binding.showListFAB.visibility = View.VISIBLE
+        }else{
+            binding.findRouteFAB.visibility = View.INVISIBLE
+            binding.showListFAB.visibility = View.INVISIBLE
+        }
+    }
+
+    private fun setFABsAnimation(clicked : Boolean) {
+        if(!clicked){
+            binding.findRouteFAB.startAnimation(fromBottom)
+            binding.showListFAB.startAnimation(fromBottom)
+            binding.infoFAB.startAnimation(rotateOpen)
+        }else{
+            binding.findRouteFAB.startAnimation(toBottom)
+            binding.showListFAB.startAnimation(toBottom)
+            binding.infoFAB.startAnimation(rotateClose)
+        }
+    }
+
+    private fun setFABsClickable(clicked : Boolean){
+        if(!clicked){
+            binding.findRouteFAB.isClickable = true
+            binding.showListFAB.isClickable = true
+        }else{
+            binding.findRouteFAB.isClickable = false
+            binding.showListFAB.isClickable = false
+        }
+    }
+
+
 
     /**
      * 경로를 찾는 함수입니다.
@@ -543,8 +598,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (cameDown) {
             binding.upLinear.animate().translationY(-upSize).withLayer().duration = 500
             binding.downLinear.animate().translationY(downSize).withLayer().duration = 500
-            binding.comeDownBtn.isClickable = true // 다시 뷰에 보이기 때문에 클릭 가능하게 설정
-            Log.d("comeDownBtn", "true")
+            binding.findRouteFAB.isClickable = true // 다시 뷰에 보이기 때문에 클릭 가능하게 설정
             cameDown = false
         } else {
             super.onBackPressed()

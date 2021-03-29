@@ -9,5 +9,7 @@
     <color name="white">#FFFFFFFF</color>
     <color name="crimson">#841640</color>
     <color name="gray">#464646</color>
+    <color name="light_red">#ec5b63</color>
+    <color name="dark_purple">#AD1C5F</color>
 
 </resources>
