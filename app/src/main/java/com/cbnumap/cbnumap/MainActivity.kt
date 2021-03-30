@@ -9,6 +9,7 @@ import android.location.Location
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.text.Editable
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
@@ -158,9 +159,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         binding.showListFAB.setOnClickListener {
-            Toast.makeText(baseContext, "눌려짐", Toast.LENGTH_SHORT).show()
             onInfoButtonClicked()
             showBuildingList()
+            if(predictedTimeVisible){
+                Log.e("chkeck", "들어옴@@")
+                binding.routeInfoLinearLayout.animate().translationX(routeLayoutWidth)
+                    .withLayer().duration =
+                    250
+                predictedTimeVisible = !predictedTimeVisible
+            }
         }
 
         val upSize = (screenHeight.toFloat() / 7f) // 화면 중 1/7만큼을 차지하는 윗 부분
@@ -186,9 +193,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
             if (!cameDown) {
                 binding.upLinear.animate().translationY(upSize).withLayer().duration = 500
-                //binding.comeDownBtn.text = "길찾기" // 이상하게 이 부분을 삭제하면 안됨
-                Log.e("upSize1", upSize.toString())
-                Log.e("downSize1", downSize.toString())
                 binding.downLinear.animate().translationY(-downSize).withLayer().duration = 500
                 cameDown = true
             } else {
@@ -445,6 +449,50 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             LinearLayoutManager(applicationContext, LinearLayoutManager.VERTICAL, false)
         locRecyclerView.adapter = locAdapter
         locRecyclerView.setHasFixedSize(false)
+
+        locAdapter.setOnItemClickListener(object:LocAdapter.OnItemClickListener{
+            override fun onStartButtonClick(v: View?, position: Int) {
+                // 기존에 열려있던 빌딩 목록 창을 닫고
+                showBuildingList()
+                binding.infoFAB.isClickable = true
+
+                // 길 검색 창을 연다
+                binding.upLinear.animate().translationY(upSize).withLayer().duration = 500
+                binding.downLinear.animate().translationY(-downSize).withLayer().duration = 500
+                cameDown = true
+
+                // 출발점을 buildingName으로 설정한다.
+                binding.startAutoTV.setText(locationList[position].buildingName)
+                startPosString = locationList[position].buildingName
+                startPosInputted = true
+                for(i in coordinateList){
+                    if(i.kor_name == locationList[position].buildingName){
+                        startPosId = i.id
+                    }
+                }
+            }
+
+            override fun onEndButtonClick(v: View?, position: Int) {
+                // 기존에 열려있던 빌딩 목록 창을 닫고
+                showBuildingList()
+                binding.infoFAB.isClickable = true
+
+                // 길 검색 창을 연다
+                binding.upLinear.animate().translationY(upSize).withLayer().duration = 500
+                binding.downLinear.animate().translationY(-downSize).withLayer().duration = 500
+                cameDown = true
+
+                // 도착점을 buildingName으로 설정한다.
+                binding.endAutoTV.setText(locationList[position].buildingName)
+                endPosString = locationList[position].buildingName
+                endPosInputted = true
+                for(i in coordinateList){
+                    if(i.kor_name == locationList[position].buildingName){
+                        endPosId = i.id
+                    }
+                }
+            }
+        })
     }
 
     private fun showBuildingList() {
@@ -995,7 +1043,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addPoint(165, 185)
         addPoint(165, 187)
         addPoint(166, 182)
-        addPoint(166, 186)
         addPoint(167, 177)
         addPoint(168, 76)
         addPoint(168, 169)
@@ -1014,7 +1061,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addPoint(174, 177)
         addPoint(175, 176)
         addPoint(177, 178)
-        addPoint(178, 186)
         addPoint(178, 179)
         addPoint(179, 180)
         addPoint(180, 181)
@@ -1025,7 +1071,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addPoint(184, 145)
         addPoint(184, 185)
         addPoint(185, 187)
-        addPoint(186, 188)
+        addPoint(281, 188)
+        addPoint(281, 166)
+        addPoint(281, 182)
+        addPoint(281, 178)
         addPoint(186, 193)
         addPoint(187, 188)
         addPoint(187, 191)
