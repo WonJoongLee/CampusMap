@@ -26,7 +26,11 @@ import android.widget.AutoCompleteTextView
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContentProviderCompat.requireContext
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.cbnumap.cbnumap.databinding.ActivityMainBinding
+import com.cbnumap.cbnumap.locationrv.LocAdapter
+import com.cbnumap.cbnumap.locationrv.LocData
 import com.cbnumap.cbnumap.server.Coordinate
 import com.cbnumap.cbnumap.server.CoordinateDB
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -83,7 +87,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private val rotateClose : Animation by lazy { AnimationUtils.loadAnimation(this, R.anim.rotate_close_anim)}
     private val fromBottom : Animation by lazy { AnimationUtils.loadAnimation(this, R.anim.from_bottom_anim)}
     private val toBottom : Animation by lazy { AnimationUtils.loadAnimation(this, R.anim.to_bottom_anim)}
-    private var fabClicked = false // FAB 아이콘들이 나왔는지 안나왔는지 확인하기 위한 변수
+    private var isFabClicked = false // FAB 아이콘들이 나왔는지 안나왔는지 확인하기 위한 변수
     private var isBuildingListOpen = false // buildinglist가 현재 화면에 보이는지 여부
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -369,6 +373,35 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         addWeight()
+
+        val locationList = mutableListOf<LocData>()
+        for(i in coordinateList.indices){
+            if(coordinateList[i].kor_name.isNotEmpty()){
+                if(coordinateList[i].building_id.isNotEmpty()) { // 빌딩 아이디가 있으면 그냥 빌딩 아이디를 넣어주고
+                    locationList.add(
+                        LocData(
+                            coordinateList[i].kor_name,
+                            coordinateList[i].building_id
+                        )
+                    )
+                }else{ // 빌딩 아이디가 없으면 공백을 넣어준다.
+                    locationList.add(
+                        LocData(
+                            coordinateList[i].kor_name,
+                            ""
+                        )
+                    )                }
+            }
+        }
+
+
+        // 건물 목록 보여주기 위한 Recyclerview 설정 부분
+        val locAdapter = LocAdapter(baseContext)
+        val locRecyclerView = findViewById<RecyclerView>(R.id.locationRecyclerView)
+        locAdapter.data = locationList
+        locRecyclerView.layoutManager = LinearLayoutManager(applicationContext, LinearLayoutManager.VERTICAL, false)
+        locRecyclerView.adapter = locAdapter
+        locRecyclerView.setHasFixedSize(false)
     }
 
     private fun showBuildingList(){
@@ -377,7 +410,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         val radius = hypot(binding.buildingList.width.toDouble(), binding.buildingList.height.toDouble())
         if(isBuildingListOpen){ // 만약 building list가 보여지고 있는 상황이었다면
-            //binding.showListFAB.backgroundTintList =
+            binding.infoFAB.isClickable = false
             val revealAnimator : Animator = ViewAnimationUtils.createCircularReveal(binding.buildingList, centerX.toInt(), centerY.toInt(), radius.toFloat(), 0F)
             revealAnimator.addListener(object: Animator.AnimatorListener{
                 override fun onAnimationStart(p0: Animator?) {}
@@ -408,10 +441,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun onInfoButtonClicked() {
-        setFABsVisibility(fabClicked)
-        setFABsAnimation(fabClicked)
-        setFABsClickable(fabClicked)
-        fabClicked = !fabClicked
+        setFABsVisibility(isFabClicked)
+        setFABsAnimation(isFabClicked)
+        setFABsClickable(isFabClicked)
+        isFabClicked = !isFabClicked
+        Log.e("isFabClicked", isFabClicked.toString())
     }
 
     private fun setFABsVisibility(clicked : Boolean) {
@@ -663,8 +697,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 binding.findRouteFAB.isClickable = true // 다시 뷰에 보이기 때문에 클릭 가능하게 설정
                 cameDown = false
             }
+            // 만약 building list가 열려있는 상황이었으면 다시 닫아주고,
+            // FAB이 클릭되지 않은 상태로 돌린다.
             isBuildingListOpen -> {
                 showBuildingList()
+                binding.infoFAB.isClickable = true
             }
             else -> {
                 super.onBackPressed()

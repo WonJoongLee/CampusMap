@@ -13,7 +13,7 @@ class RecoAdapter(private val context : Context) : RecyclerView.Adapter<RecoAdap
     var data = mutableListOf<RecoData>()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecoViewHolder {
-        val view = LayoutInflater.from(context).inflate(R.layout.item_location, parent, false)
+        val view = LayoutInflater.from(context).inflate(R.layout.item_location_reco, parent, false)
         return RecoViewHolder(view)
     }
 
