@@ -111,7 +111,9 @@
             app:layout_constraintRight_toRightOf="parent"
             android:layout_marginHorizontal="20dp"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="0dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_marginBottom="10dp"/>
 
 
     </androidx.constraintlayout.widget.ConstraintLayout>

@@ -77,16 +77,37 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     //뷰가 화면에 보이는지 여부
     private var cameDown =
         false // camedown이 false면 화면이 내려와있지 않은 상태고, camedown이 true면 화면이 내려와 있는 상태다.
-    private var predictedTimeVisible = false // false면 예상 소요시간 레이아웃이 보이지 않는 상태고, true면 예상 소요시간 레이아웃이 보이는 상태입니다.
+    private var predictedTimeVisible =
+        false // false면 예상 소요시간 레이아웃이 보이지 않는 상태고, true면 예상 소요시간 레이아웃이 보이는 상태입니다.
 
     //routeInfoLinearLayout이 얼마나 놔와야 하는지 구하기 위한 width
     private var routeLayoutWidth = 0F
 
     //FAB 버튼 관련 애니메이션 부분
-    private val rotateOpen : Animation by lazy { AnimationUtils.loadAnimation(this, R.anim.rotate_open_anim)}
-    private val rotateClose : Animation by lazy { AnimationUtils.loadAnimation(this, R.anim.rotate_close_anim)}
-    private val fromBottom : Animation by lazy { AnimationUtils.loadAnimation(this, R.anim.from_bottom_anim)}
-    private val toBottom : Animation by lazy { AnimationUtils.loadAnimation(this, R.anim.to_bottom_anim)}
+    private val rotateOpen: Animation by lazy {
+        AnimationUtils.loadAnimation(
+            this,
+            R.anim.rotate_open_anim
+        )
+    }
+    private val rotateClose: Animation by lazy {
+        AnimationUtils.loadAnimation(
+            this,
+            R.anim.rotate_close_anim
+        )
+    }
+    private val fromBottom: Animation by lazy {
+        AnimationUtils.loadAnimation(
+            this,
+            R.anim.from_bottom_anim
+        )
+    }
+    private val toBottom: Animation by lazy {
+        AnimationUtils.loadAnimation(
+            this,
+            R.anim.to_bottom_anim
+        )
+    }
     private var isFabClicked = false // FAB 아이콘들이 나왔는지 안나왔는지 확인하기 위한 변수
     private var isBuildingListOpen = false // buildinglist가 현재 화면에 보이는지 여부
 
@@ -132,11 +153,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val arrayAdapter = ArrayAdapter(baseContext, R.layout.dropdown_item, locations)
         binding.autoCompleteTextView.setAdapter(arrayAdapter)
 
-        binding.infoFAB.setOnClickListener{
+        binding.infoFAB.setOnClickListener {
             onInfoButtonClicked()
         }
 
-        binding.showListFAB.setOnClickListener{
+        binding.showListFAB.setOnClickListener {
             Toast.makeText(baseContext, "눌려짐", Toast.LENGTH_SHORT).show()
             onInfoButtonClicked()
             showBuildingList()
@@ -156,8 +177,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             onInfoButtonClicked()
             binding.findRouteFAB.isClickable = false //뷰에 가려지기 때문에 클릭 못하도록 설정
             // 길 찾기 하는 상황에서 예상 소요시간은 보이면 안되므로 다시 집어 넣음.
-            if(predictedTimeVisible){
-                binding.routeInfoLinearLayout.animate().translationX(routeLayoutWidth).withLayer().duration =
+            if (predictedTimeVisible) {
+                binding.routeInfoLinearLayout.animate().translationX(routeLayoutWidth)
+                    .withLayer().duration =
                     250
                 predictedTimeVisible = false
             }
@@ -277,7 +299,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
             }
             val manager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-            manager.hideSoftInputFromWindow(currentFocus!!.windowToken, InputMethodManager.HIDE_NOT_ALWAYS)
+            manager.hideSoftInputFromWindow(
+                currentFocus!!.windowToken,
+                InputMethodManager.HIDE_NOT_ALWAYS
+            )
         }
 
         //도착지가 다 입력되었으면 처리할 곳
@@ -328,15 +353,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
             }
             val manager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-            manager.hideSoftInputFromWindow(currentFocus!!.windowToken, InputMethodManager.HIDE_NOT_ALWAYS)
+            manager.hideSoftInputFromWindow(
+                currentFocus!!.windowToken,
+                InputMethodManager.HIDE_NOT_ALWAYS
+            )
         }
 
         binding.searchRouteBtn.setOnClickListener {
             if (startPosInputted && endPosInputted) {
                 mMap.clear() // 기존에 그려져 있던 라인들을 지우고 다시 findpath를 한다.
-                if(startPosString == endPosString){
-                    Toast.makeText(baseContext, "시작점과 도착점이 같습니다.\n다시 확인해주세요.", Toast.LENGTH_SHORT).show()
-                }else{
+                if (startPosString == endPosString) {
+                    Toast.makeText(baseContext, "시작점과 도착점이 같습니다.\n다시 확인해주세요.", Toast.LENGTH_SHORT)
+                        .show()
+                } else {
                     findPath(startPosId, endPosId)
                     binding.findRouteFAB.isClickable = true // 다시 뷰에 보이기 때문에 클릭 가능하게 설정
                     binding.upLinear.animate().translationY(-upSize).withLayer().duration = 250
@@ -353,9 +382,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     binding.predictTimeTextView.text =
                         "예상 소요시간 : ${(dist[endPosId].toFloat() / 3250F * 60F).toInt()}분" // 걷는 속도를 시속 3.25km로 잡음.
                     routeLayoutWidth = binding.predictTimeTextView.width.toFloat()
-                    binding.routeInfoLinearLayout.animate().translationX(-routeLayoutWidth).withLayer().duration =
+                    binding.routeInfoLinearLayout.animate().translationX(-routeLayoutWidth)
+                        .withLayer().duration =
                         250
-                    predictedTimeVisible = true // routeInfoLinearLayout이 다시 보이는 쪽으로 나왔으므로 예상 소요시간을 보여준다.
+                    predictedTimeVisible =
+                        true // routeInfoLinearLayout이 다시 보이는 쪽으로 나왔으므로 예상 소요시간을 보여준다.
                     startPosString = ""
                     endPosString = ""
                     startPosInputted = false
@@ -375,44 +406,63 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addWeight()
 
         val locationList = mutableListOf<LocData>()
-        for(i in coordinateList.indices){
-            if(coordinateList[i].kor_name.isNotEmpty()){
-                if(coordinateList[i].building_id.isNotEmpty()) { // 빌딩 아이디가 있으면 그냥 빌딩 아이디를 넣어주고
+        for (i in coordinateList.indices) {
+            if (coordinateList[i].kor_name.isNotEmpty()) {
+                if (coordinateList[i].building_id.isNotEmpty()) { // 빌딩 아이디가 있으면 그냥 빌딩 아이디를 넣어주고
                     locationList.add(
                         LocData(
                             coordinateList[i].kor_name,
                             coordinateList[i].building_id
                         )
                     )
-                }else{ // 빌딩 아이디가 없으면 공백을 넣어준다.
+                } else { // 빌딩 아이디가 없으면 공백을 넣어준다.
                     locationList.add(
                         LocData(
                             coordinateList[i].kor_name,
                             ""
                         )
-                    )                }
+                    )
+                }
             }
         }
 
+        // Building Number 순서로 정렬하고, Building Number가 없는 건물들은 list의 뒤로 가게 이동시킨다.
+        locationList.sortBy { it.buildingNumber }
+        while(true){
+            if(locationList[0].buildingNumber.isEmpty()){
+                locationList.add(LocData(locationList[0].buildingNumber, locationList[0].buildingName))
+                locationList.removeAt(0)
+            }else{
+                break
+            }
+        }
 
         // 건물 목록 보여주기 위한 Recyclerview 설정 부분
         val locAdapter = LocAdapter(baseContext)
         val locRecyclerView = findViewById<RecyclerView>(R.id.locationRecyclerView)
         locAdapter.data = locationList
-        locRecyclerView.layoutManager = LinearLayoutManager(applicationContext, LinearLayoutManager.VERTICAL, false)
+        locRecyclerView.layoutManager =
+            LinearLayoutManager(applicationContext, LinearLayoutManager.VERTICAL, false)
         locRecyclerView.adapter = locAdapter
         locRecyclerView.setHasFixedSize(false)
     }
 
-    private fun showBuildingList(){
+    private fun showBuildingList() {
         val centerX = binding.showListFAB.x + binding.showListFAB.width / 2
         val centerY = binding.showListFAB.y + binding.showListFAB.height / 2
 
-        val radius = hypot(binding.buildingList.width.toDouble(), binding.buildingList.height.toDouble())
-        if(isBuildingListOpen){ // 만약 building list가 보여지고 있는 상황이었다면
+        val radius =
+            hypot(binding.buildingList.width.toDouble(), binding.buildingList.height.toDouble())
+        if (isBuildingListOpen) { // 만약 building list가 보여지고 있는 상황이었다면
             binding.infoFAB.isClickable = false
-            val revealAnimator : Animator = ViewAnimationUtils.createCircularReveal(binding.buildingList, centerX.toInt(), centerY.toInt(), radius.toFloat(), 0F)
-            revealAnimator.addListener(object: Animator.AnimatorListener{
+            val revealAnimator: Animator = ViewAnimationUtils.createCircularReveal(
+                binding.buildingList,
+                centerX.toInt(),
+                centerY.toInt(),
+                radius.toFloat(),
+                0F
+            )
+            revealAnimator.addListener(object : Animator.AnimatorListener {
                 override fun onAnimationStart(p0: Animator?) {}
 
                 override fun onAnimationEnd(p0: Animator?) {
@@ -425,8 +475,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             })
             revealAnimator.duration = 300
             revealAnimator.start()
-        }else{
-            val revealAnimator : Animator = ViewAnimationUtils.createCircularReveal(
+        } else {
+            val revealAnimator: Animator = ViewAnimationUtils.createCircularReveal(
                 binding.buildingList,
                 centerX.toInt(),
                 centerY.toInt(),
@@ -448,38 +498,37 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         Log.e("isFabClicked", isFabClicked.toString())
     }
 
-    private fun setFABsVisibility(clicked : Boolean) {
-        if(!clicked){
+    private fun setFABsVisibility(clicked: Boolean) {
+        if (!clicked) {
             binding.findRouteFAB.visibility = View.VISIBLE
             binding.showListFAB.visibility = View.VISIBLE
-        }else{
+        } else {
             binding.findRouteFAB.visibility = View.INVISIBLE
             binding.showListFAB.visibility = View.INVISIBLE
         }
     }
 
-    private fun setFABsAnimation(clicked : Boolean) {
-        if(!clicked){
+    private fun setFABsAnimation(clicked: Boolean) {
+        if (!clicked) {
             binding.findRouteFAB.startAnimation(fromBottom)
             binding.showListFAB.startAnimation(fromBottom)
             binding.infoFAB.startAnimation(rotateOpen)
-        }else{
+        } else {
             binding.findRouteFAB.startAnimation(toBottom)
             binding.showListFAB.startAnimation(toBottom)
             binding.infoFAB.startAnimation(rotateClose)
         }
     }
 
-    private fun setFABsClickable(clicked : Boolean){
-        if(!clicked){
+    private fun setFABsClickable(clicked: Boolean) {
+        if (!clicked) {
             binding.findRouteFAB.isClickable = true
             binding.showListFAB.isClickable = true
-        }else{
+        } else {
             binding.findRouteFAB.isClickable = false
             binding.showListFAB.isClickable = false
         }
     }
-
 
 
     /**
