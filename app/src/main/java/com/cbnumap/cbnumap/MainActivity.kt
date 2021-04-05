@@ -161,7 +161,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         binding.showListFAB.setOnClickListener {
             onInfoButtonClicked()
             showBuildingList()
-            if(predictedTimeVisible){
+            if (predictedTimeVisible) {
                 Log.e("chkeck", "들어옴@@")
                 binding.routeInfoLinearLayout.animate().translationX(routeLayoutWidth)
                     .withLayer().duration =
@@ -432,11 +432,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Building Number 순서로 정렬하고, Building Number가 없는 건물들은 list의 뒤로 가게 이동시킨다.
         locationList.sortBy { it.buildingNumber }
-        while(true){
-            if(locationList[0].buildingNumber.isEmpty()){
-                locationList.add(LocData(locationList[0].buildingNumber, locationList[0].buildingName))
+        while (true) {
+            if (locationList[0].buildingNumber.isEmpty()) {
+                locationList.add(
+                    LocData(
+                        locationList[0].buildingNumber,
+                        locationList[0].buildingName
+                    )
+                )
                 locationList.removeAt(0)
-            }else{
+            } else {
                 break
             }
         }
@@ -450,49 +455,141 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         locRecyclerView.adapter = locAdapter
         locRecyclerView.setHasFixedSize(false)
 
-        locAdapter.setOnItemClickListener(object:LocAdapter.OnItemClickListener{
-            override fun onStartButtonClick(v: View?, position: Int) {
-                // 기존에 열려있던 빌딩 목록 창을 닫고
-                showBuildingList()
-                binding.infoFAB.isClickable = true
+//        locAdapter.setOnItemClickListener(object : LocAdapter.OnItemClickListener {
+//            override fun onStartButtonClick(v: View?, position: Int) {
+//                // 기존에 열려있던 빌딩 목록 창을 닫고
+//                showBuildingList()
+//                binding.infoFAB.isClickable = true
+//
+//                // 길 검색 창을 연다
+//                binding.upLinear.animate().translationY(upSize).withLayer().duration = 500
+//                binding.downLinear.animate().translationY(-downSize).withLayer().duration = 500
+//                cameDown = true
+//
+//                // 출발점을 buildingName으로 설정한다.
+//                binding.startAutoTV.setText(locationList[position].buildingName)
+//                startPosString = locationList[position].buildingName
+//                startPosInputted = true
+//                for (i in coordinateList) {
+//                    if (i.kor_name == locationList[position].buildingName) {
+//                        startPosId = i.id
+//                    }
+//                }
+//            }
+//
+//            override fun onEndButtonClick(v: View?, position: Int) {
+//                // 기존에 열려있던 빌딩 목록 창을 닫고
+//                showBuildingList()
+//                binding.infoFAB.isClickable = true
+//
+//                // 길 검색 창을 연다
+//                binding.upLinear.animate().translationY(upSize).withLayer().duration = 500
+//                binding.downLinear.animate().translationY(-downSize).withLayer().duration = 500
+//                cameDown = true
+//
+//                // 도착점을 buildingName으로 설정한다.
+//                binding.endAutoTV.setText(locationList[position].buildingName)
+//                endPosString = locationList[position].buildingName
+//                endPosInputted = true
+//                for (i in coordinateList) {
+//                    if (i.kor_name == locationList[position].buildingName) {
+//                        endPosId = i.id
+//                    }
+//                }
+//            }
+//        })
 
-                // 길 검색 창을 연다
-                binding.upLinear.animate().translationY(upSize).withLayer().duration = 500
-                binding.downLinear.animate().translationY(-downSize).withLayer().duration = 500
-                cameDown = true
+        var startClicked = false
+        var endClicked = false
+        var rvStartPos = -1
+        var rvEndPos = -1
+        var startPosBuildingName = ""
+        var endPosBuildingName = ""
+        locAdapter.setOnItemClickListener(object : LocAdapter.OnItemClickListener {
+            override fun onStartButtonClick(position: Int) {
+                startClicked = true
+                rvStartPos = position // 클릭된 리사이클러 뷰의 포지션을 rvStartPos에 저장
 
-                // 출발점을 buildingName으로 설정한다.
-                binding.startAutoTV.setText(locationList[position].buildingName)
-                startPosString = locationList[position].buildingName
-                startPosInputted = true
-                for(i in coordinateList){
-                    if(i.kor_name == locationList[position].buildingName){
-                        startPosId = i.id
+                startPosBuildingName = locationList[position].buildingName
+                binding.routeTextInBuildingList.text =
+                    "${startPosBuildingName}에서부터\n${endPosBuildingName}까지"
+
+                // 둘 다 클릭된 상황이라면
+                if (startClicked && endClicked) {
+                    for (i in coordinateList) {
+                        if (i.kor_name == locationList[rvStartPos].buildingName) {
+                            startPosId = i.id
+                        }
+                        if (i.kor_name == locationList[rvEndPos].buildingName) {
+                            endPosId = i.id
+                        }
                     }
+
+                    Log.e("startEndPosId", "${startPosId}, $endPosId")
+
+//                    findPath(startPosId, endPosId) // 길을 먼저 찾고
+//                    showBuildingList() // 빌딩 목록 창을 닫는다.
+//                    binding.infoFAB.isClickable = true
+//
+//                    startClicked = false
+//                    endClicked = false
                 }
+
             }
 
-            override fun onEndButtonClick(v: View?, position: Int) {
-                // 기존에 열려있던 빌딩 목록 창을 닫고
-                showBuildingList()
-                binding.infoFAB.isClickable = true
+            override fun onEndButtonClick(position: Int) {
+                endClicked = true
+                rvEndPos = position // 클릭된 리사이클러 뷰의 포지션을 rvEndPos에 저장
 
-                // 길 검색 창을 연다
-                binding.upLinear.animate().translationY(upSize).withLayer().duration = 500
-                binding.downLinear.animate().translationY(-downSize).withLayer().duration = 500
-                cameDown = true
+                endPosBuildingName = locationList[position].buildingName
+                binding.routeTextInBuildingList.text =
+                    "${startPosBuildingName}에서부터\n${endPosBuildingName}까지"
 
-                // 도착점을 buildingName으로 설정한다.
-                binding.endAutoTV.setText(locationList[position].buildingName)
-                endPosString = locationList[position].buildingName
-                endPosInputted = true
-                for(i in coordinateList){
-                    if(i.kor_name == locationList[position].buildingName){
-                        endPosId = i.id
+                // 둘 다 클릭된 상황이라면
+                if (startClicked && endClicked) {
+                    for (i in coordinateList) {
+                        if (i.kor_name == locationList[rvStartPos].buildingName) {
+                            startPosId = i.id
+                        }
+                        if (i.kor_name == locationList[rvEndPos].buildingName) {
+                            endPosId = i.id
+                        }
                     }
+
+                    Log.e("startEndPosId", "${startPosId}, $endPosId")
+
+//                    findPath(startPosId, endPosId) // 길을 먼저 찾고
+//                    showBuildingList() // 빌딩 목록 창을 닫는다.
+//                    binding.infoFAB.isClickable = true
+//
+//                    startClicked = false
+//                    endClicked = false
                 }
             }
         })
+
+        binding.okayButton.setOnClickListener {
+            // 둘 다 클릭된 상황이라면
+            if (startClicked && endClicked) {
+                for (i in coordinateList) {
+                    if (i.kor_name == locationList[rvStartPos].buildingName) {
+                        startPosId = i.id
+                    }
+                    if (i.kor_name == locationList[rvEndPos].buildingName) {
+                        endPosId = i.id
+                    }
+                }
+
+                Log.e("startEndPosId", "${startPosId}, $endPosId")
+
+                findPath(startPosId, endPosId) // 길을 먼저 찾고
+                showBuildingList() // 빌딩 목록 창을 닫는다.
+                binding.infoFAB.isClickable = true
+
+                startClicked = false
+                endClicked = false
+            }
+        }
     }
 
     private fun showBuildingList() {
@@ -587,6 +684,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun findPath(startId: Int, endId: Int) {
         // 다시 검색할 때는 초기화해줘야 한다.
         // finalpath.clear()까지는 초기화 하는 부분
+        mMap.clear()
         pq.clear()
         for (i in dist.indices) {
             dist[i] = Integer.MAX_VALUE - 1
@@ -760,6 +858,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     Log.e("Current Location", "${curLocLat}, $curLocLng")
                 }
         }
+
 
         GlobalScope.launch {
             delay(100L)

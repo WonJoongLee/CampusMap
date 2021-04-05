@@ -66,16 +66,16 @@
             android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:layout_marginEnd="5dp"
-            android:backgroundTint="@color/crimson"
-            android:textColor="@color/white"
+            android:backgroundTint="@color/very_light_crimson"
+            android:textColor="@color/crimson"
             android:text="출발" />
 
         <Button
             android:id="@+id/setEndButton"
             android:layout_width="60dp"
             android:layout_height="wrap_content"
-            android:backgroundTint="@color/crimson"
-            android:textColor="@color/white"
+            android:backgroundTint="@color/very_light_crimson"
+            android:textColor="@color/crimson"
             android:text="도착" />
 
     </LinearLayout>
