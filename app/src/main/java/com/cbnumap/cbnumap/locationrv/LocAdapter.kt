@@ -27,40 +27,38 @@ class LocAdapter(private val context: Context) : RecyclerView.Adapter<LocAdapter
     override fun onBindViewHolder(holder: LocViewHolder, position: Int) {
         holder.bind(data[position], mListener, context)
 
-        holder.startButton.setOnClickListener {
-            mListener.onStartButtonClick(position)
-
-            Log.e("pos", "$position, $selectedItemPosition")
-
-            selectedItemPosition = position
-
-            if(position == selectedItemPosition){
-                holder.startButton.setTextColor(context.getColor(R.color.white))
-                holder.startButton.backgroundTintList = context.getColorStateList(R.color.crimson)
-            }
-
-
-            notifyItemChanged(selectedItemPosition)
-        }
-
-        holder.endButton.setOnClickListener {
-            mListener.onEndButtonClick(position)
-
-            selectedEndText = holder.endButton.text.toString()
-
-            if(selectedEndText == holder.endButton.text.toString()){
-                holder.endButton.setTextColor(context.getColor(R.color.white))
-                holder.endButton.backgroundTintList = context.getColorStateList(R.color.crimson)
-            }
-        }
+//        holder.startButton.setOnClickListener {
+//            mListener.onStartButtonClick(position)
+//
+//            Log.e("pos", "$position, $selectedItemPosition")
+//
+//            selectedItemPosition = position
+//
+//            if(position == selectedItemPosition){
+//                holder.startButton.setTextColor(context.getColor(R.color.white))
+//                holder.startButton.backgroundTintList = context.getColorStateList(R.color.crimson)
+//            }
+//
+//
+//            notifyItemChanged(selectedItemPosition)
+//        }
+//
+//        holder.endButton.setOnClickListener {
+//            mListener.onEndButtonClick(position)
+//
+//            selectedEndText = holder.endButton.text.toString()
+//
+//            if(selectedEndText == holder.endButton.text.toString()){
+//                holder.endButton.setTextColor(context.getColor(R.color.white))
+//                holder.endButton.backgroundTintList = context.getColorStateList(R.color.crimson)
+//            }
+//        }
     }
 
     override fun getItemCount(): Int = data.size
 
     // onItemClickListener와 setOnItemClickListener는 어댑터 외부에서 리사이클러 뷰 내의 아이템 클릭 처리를 위한 interface와 함수
     interface OnItemClickListener {
-//        fun onStartButtonClick(v: View?, position: Int)
-//        fun onEndButtonClick(v: View?, position: Int)
         fun onStartButtonClick(position: Int)
         fun onEndButtonClick(position: Int)
     }
@@ -79,18 +77,14 @@ class LocAdapter(private val context: Context) : RecyclerView.Adapter<LocAdapter
             buildingNumberTV.text = locData.buildingNumber
             buildingNameTV.text = locData.buildingName
 
-            // 어댑터 외부에서 click listener 처리를 위한 부분
-//            startButton.setOnClickListener {
-//                mListener.onStartButtonClick(pos)
-//                startButton.setTextColor(context.getColor(R.color.white))
-//                startButton.backgroundTintList = context.getColorStateList(R.color.crimson)
-//            }
-//
-//            endButton.setOnClickListener {
-//                mListener.onEndButtonClick(pos)
-//                endButton.setTextColor(context.getColor(R.color.white))
-//                endButton.backgroundTintList = context.getColorStateList(R.color.crimson)
-//            }
+             //어댑터 외부에서 click listener 처리를 위한 부분
+            startButton.setOnClickListener {
+                mListener.onStartButtonClick(pos)
+            }
+
+            endButton.setOnClickListener {
+                mListener.onEndButtonClick(pos)
+            }
         }
     }
 }
