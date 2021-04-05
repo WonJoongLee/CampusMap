@@ -2,6 +2,7 @@ package com.cbnumap.cbnumap
 
 import android.Manifest
 import android.animation.Animator
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Typeface
@@ -112,6 +113,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var isFabClicked = false // FAB 아이콘들이 나왔는지 안나왔는지 확인하기 위한 변수
     private var isBuildingListOpen = false // buildinglist가 현재 화면에 보이는지 여부
 
+    @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -555,6 +557,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 findPath(startPosId, endPosId) // 길을 먼저 찾고
                 showBuildingList() // 빌딩 목록 창을 닫는다.
                 binding.infoFAB.isClickable = true
+
+                binding.predictTimeTextView.text =
+                    "예상 소요시간 : ${(dist[endPosId].toFloat() / 3250F * 60F).toInt()}분" // 걷는 속도를 시속 3.25km로 잡음.
+                routeLayoutWidth = binding.predictTimeTextView.width.toFloat()
+                binding.routeInfoLinearLayout.animate().translationX(-routeLayoutWidth)
+                    .withLayer().duration =
+                    250
+                predictedTimeVisible =
+                    true
 
                 // 다시 원래대로 돌려 놓는다.
                 startClicked = false
